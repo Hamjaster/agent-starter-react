@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { buttonClass } from '@/components/saathi/button';
+import { inputClass } from '@/components/saathi/ui';
 import { RELATION_LABELS } from '@/lib/brief';
 import { cn } from '@/lib/cn';
 import { ACCEPT, ExtractError, requestExtraction } from '@/lib/extract';
@@ -52,9 +53,6 @@ const SEXES: { value: Exclude<Sex, ''>; label: string }[] = [
 ];
 
 export const card = 'rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-7';
-export const inputClass =
-  'w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-base text-gray-900 placeholder:text-gray-400 transition-colors focus:border-brand-3 focus:ring-4 focus:ring-brand/10 focus:outline-none';
-
 /**
  * The health profile as one editable page: who it's for, their health, and the documents
  * doctor.ai has read. Used to review what doctor.ai understood and to edit later.

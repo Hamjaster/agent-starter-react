@@ -228,7 +228,7 @@ export function ProfileBuilder({
           {!text && (
             <div
               aria-hidden
-              className="pointer-events-none absolute inset-x-2 top-1.5 text-base leading-relaxed text-gray-400 md:text-lg"
+              className="pointer-events-none absolute inset-x-2 top-1.5 text-base leading-relaxed text-gray-500 md:text-lg"
             >
               <AnimatePresence mode="wait" initial={false}>
                 <motion.span

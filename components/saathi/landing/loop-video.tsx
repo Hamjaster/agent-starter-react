@@ -1,12 +1,14 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { Pause, Play } from 'lucide-react';
 import { useReducedMotion } from 'motion/react';
 import { cn } from '@/lib/cn';
 
 /**
  * A silent looping product film. Loads only when it nears the viewport, plays while visible,
- * pauses when scrolled away. Under reduced motion it shows the poster frame only.
+ * pauses when scrolled away, and has a pause button (it stays paused once paused). Under
+ * reduced motion it shows the poster frame only.
  */
 export function LoopVideo({
   name,
@@ -27,6 +29,8 @@ export function LoopVideo({
   const ref = useRef<HTMLVideoElement>(null);
   const [near, setNear] = useState(false);
   const visible = useRef(false);
+  const userPaused = useRef(false);
+  const [paused, setPaused] = useState(false);
   const poster = `/videos/${name}-poster.jpg`;
 
   useEffect(() => {
@@ -37,7 +41,7 @@ export function LoopVideo({
         visible.current = entry.isIntersecting;
         if (entry.isIntersecting) {
           setNear(true);
-          if (el.currentSrc) el.play().catch(() => {});
+          if (el.currentSrc && !userPaused.current) el.play().catch(() => {});
         } else {
           el.pause();
         }
@@ -53,7 +57,7 @@ export function LoopVideo({
     const el = ref.current;
     if (!near || !el) return;
     el.load();
-    if (visible.current) el.play().catch(() => {});
+    if (visible.current && !userPaused.current) el.play().catch(() => {});
   }, [near]);
 
   if (reduce) {
@@ -69,25 +73,53 @@ export function LoopVideo({
     );
   }
 
+  const toggle = () => {
+    const el = ref.current;
+    if (!el) return;
+    if (el.paused) {
+      userPaused.current = false;
+      el.play().catch(() => {});
+    } else {
+      userPaused.current = true;
+      el.pause();
+    }
+  };
+
   return (
-    <video
-      ref={ref}
-      aria-label={label}
-      className={cn('block h-auto w-full', className)}
-      width={width}
-      height={height}
-      poster={poster}
-      muted
-      loop
-      playsInline
-      preload={near ? 'auto' : 'none'}
-    >
-      {near && (
-        <>
-          <source src={`/videos/${name}.webm`} type="video/webm" />
-          <source src={`/videos/${name}.mp4`} type="video/mp4" />
-        </>
-      )}
-    </video>
+    <div className="relative">
+      <video
+        ref={ref}
+        aria-label={label}
+        className={cn('block h-auto w-full', className)}
+        width={width}
+        height={height}
+        poster={poster}
+        muted
+        loop
+        playsInline
+        preload={near ? 'auto' : 'none'}
+        onPlay={() => setPaused(false)}
+        onPause={() => setPaused(true)}
+      >
+        {near && (
+          <>
+            <source src={`/videos/${name}.webm`} type="video/webm" />
+            <source src={`/videos/${name}.mp4`} type="video/mp4" />
+          </>
+        )}
+      </video>
+      <button
+        type="button"
+        onClick={toggle}
+        aria-label={paused ? 'Play film' : 'Pause film'}
+        className="absolute right-3 bottom-3 grid size-10 place-items-center rounded-full bg-black/45 text-white opacity-70 backdrop-blur transition-opacity hover:opacity-100 focus-visible:opacity-100"
+      >
+        {paused ? (
+          <Play aria-hidden className="size-4 fill-current" />
+        ) : (
+          <Pause aria-hidden className="size-4 fill-current" />
+        )}
+      </button>
+    </div>
   );
 }

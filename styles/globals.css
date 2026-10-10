@@ -44,6 +44,7 @@
   --tracking-display-sm: -0.04em;
 
   --animate-fade-up: fadeUp 0.6s ease-out both;
+  --animate-page-in: pageIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-marquee: marquee 38s linear infinite;
   --animate-scan: scan 2.8s ease-in-out infinite;
   --animate-drift-a: driftA 22s ease-in-out infinite alternate;
@@ -72,6 +73,15 @@
     }
     to {
       background-position: -200% 0;
+    }
+  }
+
+  @keyframes pageIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
     }
   }
 

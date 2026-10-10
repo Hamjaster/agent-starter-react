@@ -108,7 +108,7 @@ export function Composer({ delay = 0 }: { delay?: number }) {
           {!text && (
             <div
               aria-hidden
-              className="pointer-events-none absolute inset-x-2 top-1.5 overflow-hidden text-base leading-relaxed text-gray-400 md:text-lg"
+              className="pointer-events-none absolute inset-x-2 top-1.5 overflow-hidden text-base leading-relaxed text-gray-500 md:text-lg"
             >
               <AnimatePresence mode="wait" initial={false}>
                 <motion.span

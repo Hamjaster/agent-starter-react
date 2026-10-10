@@ -586,24 +586,28 @@ export function Faq() {
             const isOpen = open === i;
             return (
               <Reveal key={q} delay={i * 0.06} y={16}>
-                <button
-                  type="button"
-                  aria-expanded={isOpen}
-                  onClick={() => setOpen(isOpen ? null : i)}
-                  className="flex w-full items-center justify-between gap-6 py-6 text-left text-lg text-gray-900"
-                >
-                  {q}
-                  <motion.span
-                    animate={{ rotate: isOpen ? 45 : 0 }}
-                    transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                    className={cn(
-                      'grid size-8 shrink-0 place-items-center rounded-full border transition-colors',
-                      isOpen ? 'bg-brand border-brand text-white' : 'border-gray-200 text-gray-500'
-                    )}
+                <h3 className="font-sans">
+                  <button
+                    type="button"
+                    aria-expanded={isOpen}
+                    onClick={() => setOpen(isOpen ? null : i)}
+                    className="flex w-full items-center justify-between gap-6 py-6 text-left text-lg text-gray-900"
                   >
-                    <Plus className="size-4" />
-                  </motion.span>
-                </button>
+                    {q}
+                    <motion.span
+                      animate={{ rotate: isOpen ? 45 : 0 }}
+                      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                      className={cn(
+                        'grid size-8 shrink-0 place-items-center rounded-full border transition-colors',
+                        isOpen
+                          ? 'bg-brand border-brand text-white'
+                          : 'border-gray-200 text-gray-500'
+                      )}
+                    >
+                      <Plus aria-hidden className="size-4" />
+                    </motion.span>
+                  </button>
+                </h3>
                 <AnimatePresence initial={false}>
                   {isOpen && (
                     <motion.div

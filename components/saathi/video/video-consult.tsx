@@ -374,6 +374,7 @@ function Live({
   return (
     <div className="bg-brand relative isolate flex h-svh flex-col overflow-hidden text-white">
       <AmbientBg className="-z-10" />
+      <h1 className="sr-only">Video consult with doctor.ai</h1>
 
       <header className="flex shrink-0 items-center justify-between gap-4 px-4 py-3 sm:px-5 lg:px-6 lg:py-4">
         <div className="flex items-center gap-3">
@@ -777,6 +778,16 @@ function AgentText({ text }: { text: string }) {
 function Transcript({ patientName, chat }: { patientName: string; chat: SessionChat }) {
   const { messages, send, isSending } = chat;
   const agent = useAgent();
+  // Screen readers hear each reply once it's finished, not every streamed word.
+  const [announce, setAnnounce] = useState('');
+  const lastState = useRef(agent.state);
+  useEffect(() => {
+    if (lastState.current === 'speaking' && agent.state !== 'speaking') {
+      const last = messages.findLast((m) => m.from?.isLocal !== true);
+      if (last) setAnnounce(`doctor.ai: ${plain(last.message)}`);
+    }
+    lastState.current = agent.state;
+  }, [agent.state, messages]);
   const [draft, setDraft] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
   const thinking = agent.state === 'thinking';
@@ -787,9 +798,11 @@ function Transcript({ patientName, chat }: { patientName: string; chat: SessionC
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
+      <p aria-live="polite" className="sr-only">
+        {announce}
+      </p>
       <div
         className="scrollbar-hide min-h-0 flex-1 overflow-y-auto px-4 py-4 lg:px-5"
-        aria-live="polite"
         data-lenis-prevent
       >
         {messages.length === 0 ? (
@@ -797,7 +810,7 @@ function Transcript({ patientName, chat }: { patientName: string; chat: SessionC
             <p className="font-display tracking-display-sm text-lg text-white/80">
               Just talk, like on a phone call.
             </p>
-            <p className="mt-1 text-sm text-white/45">
+            <p className="mt-1 text-sm text-white/65">
               Captions appear here as you and doctor.ai talk.
             </p>
           </div>
@@ -821,7 +834,7 @@ function Transcript({ patientName, chat }: { patientName: string; chat: SessionC
                     )}
                   >
                     {first && (
-                      <span className="mb-1.5 px-1 text-[11px] font-medium tracking-wide text-white/45 uppercase">
+                      <span className="mb-1.5 px-1 text-[11px] font-medium tracking-wide text-white/65 uppercase">
                         {mine ? patientName : 'doctor.ai'}
                       </span>
                     )}
@@ -877,14 +890,14 @@ function Transcript({ patientName, chat }: { patientName: string; chat: SessionC
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             placeholder="Type instead of speaking"
-            className="h-9 min-w-0 flex-1 bg-transparent text-sm text-white placeholder:text-white/40 focus:outline-none"
+            className="h-10 min-w-0 flex-1 bg-transparent text-base text-white placeholder:text-white/55 focus:outline-none"
           />
           <motion.button
             type="submit"
             aria-label="Send message"
             disabled={!draft.trim() || isSending}
             whileTap={{ scale: 0.9 }}
-            className="grid size-9 shrink-0 place-items-center rounded-full bg-white text-gray-900 transition-opacity disabled:opacity-30"
+            className="grid size-10 shrink-0 place-items-center rounded-full bg-white text-gray-900 transition-opacity disabled:opacity-30"
           >
             <ArrowUp className="size-4" />
           </motion.button>

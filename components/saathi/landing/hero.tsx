@@ -61,9 +61,10 @@ export function Hero() {
       const t = setTimeout(() => setHello(false), 3600);
       return () => clearTimeout(t);
     }
+    if (reduce) return;
     const t = setInterval(() => setI((v) => (v + 1) % SCRIPT.length), 3800);
     return () => clearInterval(t);
-  }, [hello]);
+  }, [hello, reduce]);
 
   const onPoke = useCallback(() => setHello(true), []);
 
@@ -123,9 +124,10 @@ export function Hero() {
             className="absolute inset-0 [mask-image:linear-gradient(to_bottom,black_78%,transparent_100%)]"
           />
 
-          {/* Subtitles: what's being said on the demo call. */}
+          {/* Subtitles: what's being said on the demo call. Decorative, so screen readers skip
+              the loop instead of hearing it every few seconds. */}
           <div
-            aria-live="polite"
+            aria-hidden
             className="pointer-events-none absolute inset-x-0 bottom-[6%] flex justify-center px-6 lg:bottom-[9%]"
           >
             <AnimatePresence mode="wait">

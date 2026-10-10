@@ -1,18 +1,16 @@
 'use client';
 
-import { motion, useReducedMotion } from 'motion/react';
+import { MotionConfig } from 'motion/react';
 
-/** Each route fades in as you navigate (opacity only, so fixed and sticky children keep working). */
+/**
+ * Every route fades in with CSS, so text paints without waiting for JavaScript (opacity only,
+ * so fixed and sticky children keep working). MotionConfig makes every motion component
+ * respect the visitor's reduced-motion setting.
+ */
 export default function Template({ children }: { children: React.ReactNode }) {
-  const reduce = useReducedMotion();
-  if (reduce) return <>{children}</>;
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-    >
-      {children}
-    </motion.div>
+    <MotionConfig reducedMotion="user">
+      <div className="animate-page-in">{children}</div>
+    </MotionConfig>
   );
 }

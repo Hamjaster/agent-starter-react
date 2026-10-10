@@ -60,7 +60,7 @@ type TextTag = 'h1' | 'h2' | 'h3' | 'p' | 'span';
 
 /**
  * Splits text into words and fades each one up (opacity 0→1, 20px→0, 0.6s ease-out),
- * staggered. Runs on mount, or when scrolled into view with `inView`.
+ * staggered (capped so long text is fully in within about a second). Runs on mount, or when scrolled into view with `inView`.
  * Words listed in `emphasis` render in italic.
  */
 export function AnimatedText({
@@ -88,6 +88,8 @@ export function AnimatedText({
   const show = !inView || seen;
   const Tag = motion[as];
   const words = text.split(' ');
+  // Long passages shouldn't reveal slower than people read: cap the whole sweep at ~0.8s.
+  const step = Math.min(stagger, 0.8 / Math.max(words.length, 1));
 
   if (reduce) {
     const Plain = as;
@@ -106,7 +108,7 @@ export function AnimatedText({
             )}
             initial={{ opacity: 0, y: 20 }}
             animate={show ? { opacity: 1, y: 0 } : undefined}
-            transition={{ duration: 0.6, ease: 'easeOut', delay: delay + i * stagger }}
+            transition={{ duration: 0.6, ease: 'easeOut', delay: delay + i * step }}
           >
             {w}
           </motion.span>
