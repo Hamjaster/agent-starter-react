@@ -3,12 +3,14 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ArrowRight, MessageCircle, Phone, Siren, Video } from 'lucide-react';
+import { ArrowLeft, ArrowRight, MessageCircle, Phone, Video } from 'lucide-react';
 import { motion } from 'motion/react';
+import { EmergencyAlert } from '@/components/saathi/emergency';
 import { AnimatedText, EASE_OUT, PageSkeleton } from '@/components/saathi/motion';
 import { AppHeader } from '@/components/saathi/ui';
 import { Wordmark } from '@/components/saathi/wordmark';
 import { buildBrief, firstName, waCallLink, waChatLink } from '@/lib/brief';
+import { cn } from '@/lib/cn';
 import { actions, useHydrated, useSaathi } from '@/lib/saathi-store';
 import { QR } from './qr';
 import { TokenCard } from './token-card';
@@ -89,17 +91,11 @@ export function Handoff({
     <Frame>
       <div className="mx-auto max-w-6xl px-6 py-10 md:px-12 md:py-14">
         {emergency && (
-          <motion.div
-            {...rise(0)}
-            role="alert"
-            className="bg-danger mb-8 flex gap-4 rounded-2xl p-5 text-white"
-          >
-            <Siren className="mt-0.5 size-6 shrink-0" />
-            <p className="leading-relaxed">
-              <strong className="font-semibold">You marked an emergency sign.</strong> Call your
-              local emergency number or go to the nearest emergency department now. doctor.ai can’t
-              treat an emergency over a call.
-            </p>
+          <motion.div {...rise(0)} className="mb-8">
+            <EmergencyAlert
+              flags={intake.redFlags}
+              who={profile.relation === 'self' ? undefined : firstName(profile.name)}
+            />
           </motion.div>
         )}
 
@@ -150,7 +146,10 @@ export function Handoff({
                     <a
                       href={callHref!}
                       onClick={() => actions.logConsult(profile.id, 'whatsapp-call')}
-                      className="bg-wa inline-flex items-center gap-2 rounded-lg px-6 py-3.5 font-semibold text-[#06301a] transition-transform hover:-translate-y-0.5"
+                      className={cn(
+                        'inline-flex items-center gap-2 rounded-xl px-6 py-3.5 font-semibold transition-transform hover:-translate-y-0.5',
+                        emergency ? 'border-wa-ink/70 text-wa-ink border' : 'bg-wa text-wa-ink'
+                      )}
                     >
                       <Phone className="size-4 fill-current" /> Call doctor.ai on WhatsApp
                     </a>

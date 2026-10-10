@@ -39,6 +39,13 @@ export const RED_FLAGS = [
   'Thoughts of harming yourself',
 ] as const;
 
+export const SELF_HARM_FLAG: (typeof RED_FLAGS)[number] = 'Thoughts of harming yourself';
+
+/** Where the emergency guidance sends people. doctor.ai's patients are in Pakistan. */
+export const EMERGENCY_LINE = { name: 'Rescue 1122', tel: '1122' };
+/** Free, confidential 24/7 mental health helpline. */
+export const CRISIS_LINE = { name: 'Umang', tel: '+923117786264', display: '0311 778 6264' };
+
 export function firstName(name: string) {
   return name.trim().split(/\s+/)[0] ?? '';
 }

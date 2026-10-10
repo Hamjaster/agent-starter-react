@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, Check, Pencil, Siren } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Pencil } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { EmergencyAlert } from '@/components/saathi/emergency';
 import { EASE_OUT } from '@/components/saathi/motion';
 import { BODY_AREAS, RED_FLAGS, SINCE_LABELS, firstName } from '@/lib/brief';
 import { cn } from '@/lib/cn';
@@ -51,6 +52,22 @@ export function IntakeFlow({
   const self = profile.relation === 'self';
   const name = firstName(profile.name);
   const emergency = intake.redFlags.length > 0;
+  const alertRef = useRef<HTMLDivElement>(null);
+  const wasEmergency = useRef(emergency);
+
+  // The alert sits above the options; when a sign is first ticked, bring it into view so it
+  // can't be missed below the fold on a phone.
+  useEffect(() => {
+    if (emergency && !wasEmergency.current) {
+      requestAnimationFrame(() =>
+        alertRef.current?.scrollIntoView({
+          block: 'start',
+          behavior: reduce ? 'auto' : 'smooth',
+        })
+      );
+    }
+    wasEmergency.current = emergency;
+  }, [emergency, reduce]);
   const ready = intake.concern.trim().length >= 3;
 
   const goTo = (n: number) => {
@@ -111,6 +128,23 @@ export function IntakeFlow({
                 }
                 hint="Tap any that apply."
               >
+                <AnimatePresence initial={false}>
+                  {emergency && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <EmergencyAlert
+                        ref={alertRef}
+                        flags={intake.redFlags}
+                        who={self ? undefined : name}
+                        className="mb-6"
+                      />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
                 <div className="grid gap-2 sm:grid-cols-2">
                   {RED_FLAGS.map((f) => {
                     const on = intake.redFlags.includes(f);
@@ -146,28 +180,6 @@ export function IntakeFlow({
                     );
                   })}
                 </div>
-                <AnimatePresence>
-                  {emergency && (
-                    <motion.div
-                      role="alert"
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="bg-danger mt-6 flex gap-4 rounded-2xl p-5 text-white">
-                        <Siren className="mt-0.5 size-6 shrink-0" />
-                        <div>
-                          <p className="text-lg font-semibold">Get emergency care now.</p>
-                          <p className="mt-1 leading-relaxed text-white/90">
-                            Call your local emergency number or go to the nearest emergency
-                            department. Don’t wait for a consult with doctor.ai.
-                          </p>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
               </Question>
             )}
 
