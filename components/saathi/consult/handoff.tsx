@@ -11,7 +11,6 @@ import { AnimatedText, PageSkeleton, rise } from '@/components/saathi/motion';
 import { AppHeader } from '@/components/saathi/ui';
 import { Wordmark } from '@/components/saathi/wordmark';
 import { buildBrief, firstName, waCallLink, waChatLink } from '@/lib/brief';
-import { cn } from '@/lib/cn';
 import { actions, useHydrated, useSaathi } from '@/lib/saathi-store';
 import { QR } from './qr';
 import { TokenCard } from './token-card';

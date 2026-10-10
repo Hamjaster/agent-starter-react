@@ -10,7 +10,7 @@ import { EASE_OUT } from '@/components/saathi/motion';
 import { BODY_AREAS, RED_FLAGS, SINCE_LABELS, firstName } from '@/lib/brief';
 import { cn } from '@/lib/cn';
 import { type Intake, type Profile, type Since, actions } from '@/lib/saathi-store';
-import { Pill, Question } from './onboarding';
+import { Pill, Question } from './wizard';
 
 /*
  * Today's concern, one question at a time. Safety comes first: if any emergency sign is
@@ -71,7 +71,10 @@ export function IntakeFlow({
   }, [emergency, reduce]);
   const ready = intake.concern.trim().length >= 3;
 
+  // After the first move, each new step's heading takes focus (see Question).
+  const moved = useRef(false);
   const goTo = (n: number) => {
+    moved.current = true;
     setDir(n > i ? 1 : -1);
     setI(Math.min(STEPS.length - 1, Math.max(0, n)));
   };
@@ -83,7 +86,7 @@ export function IntakeFlow({
   return (
     <section
       aria-label="Today’s concern"
-      className="flex min-h-[560px] flex-col rounded-2xl border border-gray-200 bg-white p-6 shadow-sm sm:p-10"
+      className="flex min-h-[460px] flex-col rounded-2xl border border-gray-200 bg-white p-6 shadow-sm sm:p-10"
     >
       {/* Progress */}
       <div className="flex items-center gap-4">
@@ -92,13 +95,20 @@ export function IntakeFlow({
           onClick={() => goTo(i - 1)}
           aria-label="Back"
           className={cn(
-            'grid size-9 shrink-0 place-items-center rounded-full text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900',
+            'grid size-11 shrink-0 place-items-center rounded-full text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900',
             i === 0 && 'invisible'
           )}
         >
           <ArrowLeft className="size-5" />
         </button>
-        <div className="h-1 flex-1 overflow-hidden rounded-full bg-gray-100">
+        <div
+          role="progressbar"
+          aria-label="Progress"
+          aria-valuemin={0}
+          aria-valuemax={STEPS.length - 1}
+          aria-valuenow={i}
+          className="h-1 flex-1 overflow-hidden rounded-full bg-gray-100"
+        >
           <motion.div
             className="bg-brand h-full rounded-full"
             initial={false}
@@ -106,7 +116,7 @@ export function IntakeFlow({
             transition={{ duration: 0.5, ease: EASE_OUT }}
           />
         </div>
-        <span className="w-10 shrink-0 text-right text-xs text-gray-400 tabular-nums">
+        <span className="w-10 shrink-0 text-right text-xs text-gray-500 tabular-nums">
           {step === 'recap' ? '' : `${i + 1}/${STEPS.length - 1}`}
         </span>
       </div>
@@ -122,6 +132,7 @@ export function IntakeFlow({
           >
             {step === 'safety' && (
               <Question
+                focusOnMount={moved.current}
                 title={
                   self
                     ? 'First, is any of this happening now?'
@@ -129,63 +140,72 @@ export function IntakeFlow({
                 }
                 hint="Tap any that apply."
               >
-                <AnimatePresence initial={false}>
-                  {emergency && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="overflow-hidden"
-                    >
-                      <EmergencyAlert
-                        ref={alertRef}
-                        flags={intake.redFlags}
-                        who={self ? undefined : name}
-                        className="mb-6"
-                      />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {RED_FLAGS.map((f) => {
-                    const on = intake.redFlags.includes(f);
-                    return (
-                      <button
-                        key={f}
-                        type="button"
-                        aria-pressed={on}
-                        onClick={() =>
-                          update({
-                            redFlags: on
-                              ? intake.redFlags.filter((x) => x !== f)
-                              : [...intake.redFlags, f],
-                          })
-                        }
-                        className={cn(
-                          'flex items-center gap-3 rounded-xl border px-4 py-3.5 text-left text-[15px] transition-[background-color,border-color,color,transform] active:scale-[0.99]',
-                          on
-                            ? 'border-danger bg-danger text-white'
-                            : 'border-gray-200 bg-white text-gray-800 hover:border-gray-400'
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            'grid size-5 shrink-0 place-items-center rounded-md border',
-                            on ? 'border-white bg-white/20' : 'border-gray-300'
-                          )}
+                {(q) => (
+                  <>
+                    <AnimatePresence initial={false}>
+                      {emergency && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="overflow-hidden"
                         >
-                          {on && <Check className="size-3.5" strokeWidth={3} />}
-                        </span>
-                        {f}
-                      </button>
-                    );
-                  })}
-                </div>
+                          <EmergencyAlert
+                            ref={alertRef}
+                            flags={intake.redFlags}
+                            who={self ? undefined : name}
+                            className="mb-6"
+                          />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                    <div
+                      role="group"
+                      aria-labelledby={q.titleId}
+                      className="grid gap-2 sm:grid-cols-2"
+                    >
+                      {RED_FLAGS.map((f) => {
+                        const on = intake.redFlags.includes(f);
+                        return (
+                          <button
+                            key={f}
+                            type="button"
+                            aria-pressed={on}
+                            onClick={() =>
+                              update({
+                                redFlags: on
+                                  ? intake.redFlags.filter((x) => x !== f)
+                                  : [...intake.redFlags, f],
+                              })
+                            }
+                            className={cn(
+                              'flex items-center gap-3 rounded-xl border px-4 py-3.5 text-left text-[15px] transition-[background-color,border-color,color,transform] active:scale-[0.99]',
+                              on
+                                ? 'border-danger bg-danger text-white'
+                                : 'border-gray-200 bg-white text-gray-800 hover:border-gray-400'
+                            )}
+                          >
+                            <span
+                              className={cn(
+                                'grid size-5 shrink-0 place-items-center rounded-md border',
+                                on ? 'border-white bg-white/20' : 'border-gray-300'
+                              )}
+                            >
+                              {on && <Check className="size-3.5" strokeWidth={3} />}
+                            </span>
+                            {f}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
               </Question>
             )}
 
             {step === 'concern' && (
               <Question
+                focusOnMount={false}
                 title={self ? 'What’s bothering you?' : `What’s bothering ${name}?`}
                 hint={
                   carried
@@ -193,131 +213,170 @@ export function IntakeFlow({
                     : 'In your own words. What, where, since when, what makes it worse.'
                 }
               >
-                <textarea
-                  autoFocus
-                  rows={4}
-                  value={intake.concern}
-                  onChange={(e) => update({ concern: e.target.value })}
-                  placeholder="An itchy red rash on my forearm. It started three days ago and is worse at night."
-                  className="w-full resize-none border-b-2 border-gray-200 bg-transparent py-3 text-xl leading-relaxed text-gray-900 placeholder:text-gray-300 focus:border-gray-900 focus:outline-none md:text-2xl"
-                />
+                {(q) => (
+                  <>
+                    <textarea
+                      autoFocus
+                      aria-labelledby={q.titleId}
+                      aria-describedby={q.hintId}
+                      rows={4}
+                      value={intake.concern}
+                      onChange={(e) => update({ concern: e.target.value })}
+                      placeholder="An itchy red rash on my forearm. It started three days ago and is worse at night."
+                      className="w-full resize-none border-b-2 border-gray-200 bg-transparent py-3 text-xl leading-relaxed text-gray-900 placeholder:text-gray-400 focus:border-gray-900 focus:outline-none md:text-2xl"
+                    />
+                  </>
+                )}
               </Question>
             )}
 
             {step === 'where' && (
-              <Question title="Where is it?" hint="Tap all that apply.">
-                <div className="flex flex-wrap gap-2">
-                  {BODY_AREAS.map((a) => (
-                    <Pill
-                      key={a}
-                      on={intake.areas.includes(a)}
-                      onClick={() =>
-                        update({
-                          areas: intake.areas.includes(a)
-                            ? intake.areas.filter((x) => x !== a)
-                            : [...intake.areas, a],
-                        })
-                      }
-                    >
-                      {a}
-                    </Pill>
-                  ))}
-                </div>
+              <Question
+                focusOnMount={moved.current}
+                title="Where is it?"
+                hint="Tap all that apply."
+              >
+                {(q) => (
+                  <>
+                    <div role="group" aria-labelledby={q.titleId} className="flex flex-wrap gap-2">
+                      {BODY_AREAS.map((a) => (
+                        <Pill
+                          key={a}
+                          on={intake.areas.includes(a)}
+                          onClick={() =>
+                            update({
+                              areas: intake.areas.includes(a)
+                                ? intake.areas.filter((x) => x !== a)
+                                : [...intake.areas, a],
+                            })
+                          }
+                        >
+                          {a}
+                        </Pill>
+                      ))}
+                    </div>
+                  </>
+                )}
               </Question>
             )}
 
             {step === 'since' && (
-              <Question title="When did it start?">
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {(Object.keys(SINCE_LABELS) as Exclude<Since, ''>[]).map((k) => {
-                    const on = intake.since === k;
-                    return (
-                      <button
-                        key={k}
-                        type="button"
-                        onClick={() => {
-                          update({ since: k });
-                          setTimeout(next, 160);
-                        }}
-                        className={cn(
-                          'rounded-xl border px-5 py-4 text-left text-lg transition-[background-color,border-color,color,transform] active:scale-[0.99]',
-                          on
-                            ? 'border-brand bg-brand text-white'
-                            : 'border-gray-200 bg-white text-gray-900 hover:-translate-y-0.5 hover:border-gray-400'
-                        )}
-                      >
-                        {SINCE_LABELS[k]}
-                      </button>
-                    );
-                  })}
-                </div>
+              <Question focusOnMount={moved.current} title="When did it start?">
+                {(q) => (
+                  <>
+                    <div
+                      role="group"
+                      aria-labelledby={q.titleId}
+                      className="grid gap-2 sm:grid-cols-2"
+                    >
+                      {(Object.keys(SINCE_LABELS) as Exclude<Since, ''>[]).map((k) => {
+                        const on = intake.since === k;
+                        return (
+                          <button
+                            key={k}
+                            type="button"
+                            aria-pressed={on}
+                            onClick={() => {
+                              update({ since: k });
+                              setTimeout(next, 160);
+                            }}
+                            className={cn(
+                              'rounded-xl border px-5 py-4 text-left text-lg transition-[background-color,border-color,color,transform] active:scale-[0.99]',
+                              on
+                                ? 'border-brand bg-brand text-white'
+                                : 'border-gray-200 bg-white text-gray-900 hover:-translate-y-0.5 hover:border-gray-400'
+                            )}
+                          >
+                            {SINCE_LABELS[k]}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
               </Question>
             )}
 
             {step === 'severity' && (
-              <Question title="How bad is it right now?">
-                <p className="font-display tracking-display-sm mb-6 h-8 text-2xl text-gray-900">
-                  {severityWord(intake.severity) ?? (
-                    <span className="text-gray-300">Pick a number</span>
-                  )}
-                </p>
-                <div className="grid grid-cols-5 gap-2 sm:grid-cols-10">
-                  {Array.from({ length: 10 }, (_, k) => k + 1).map((n) => {
-                    const on = intake.severity !== null && n <= intake.severity;
-                    return (
-                      <motion.button
-                        key={n}
-                        type="button"
-                        whileTap={{ scale: 0.9 }}
-                        aria-label={`${n} out of 10`}
-                        aria-pressed={intake.severity === n}
-                        onClick={() => update({ severity: n })}
-                        className={cn(
-                          'h-14 rounded-xl border text-lg tabular-nums transition-colors',
-                          on
-                            ? 'border-brand bg-brand text-white'
-                            : 'border-gray-200 bg-white text-gray-600 hover:border-gray-400'
-                        )}
-                        style={on ? { transitionDelay: `${(n - 1) * 25}ms` } : undefined}
-                      >
-                        {n}
-                      </motion.button>
-                    );
-                  })}
-                </div>
+              <Question focusOnMount={moved.current} title="How bad is it right now?">
+                {(q) => (
+                  <>
+                    <p className="font-display tracking-display-sm mb-6 h-8 text-2xl text-gray-900">
+                      {severityWord(intake.severity) ?? (
+                        <span className="text-gray-500">Pick a number</span>
+                      )}
+                    </p>
+                    <div
+                      role="group"
+                      aria-labelledby={q.titleId}
+                      className="grid grid-cols-5 gap-2 sm:grid-cols-10"
+                    >
+                      {Array.from({ length: 10 }, (_, k) => k + 1).map((n) => {
+                        const on = intake.severity !== null && n <= intake.severity;
+                        return (
+                          <motion.button
+                            key={n}
+                            type="button"
+                            whileTap={{ scale: 0.9 }}
+                            aria-label={`${n} out of 10`}
+                            aria-pressed={intake.severity === n}
+                            onClick={() => update({ severity: n })}
+                            className={cn(
+                              'h-14 rounded-xl border text-lg tabular-nums transition-colors',
+                              on
+                                ? 'border-brand bg-brand text-white'
+                                : 'border-gray-200 bg-white text-gray-600 hover:border-gray-400'
+                            )}
+                            style={on ? { transitionDelay: `${(n - 1) * 25}ms` } : undefined}
+                          >
+                            {n}
+                          </motion.button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
               </Question>
             )}
 
             {step === 'recap' && (
               <Question
+                focusOnMount={moved.current}
                 title={self ? 'Ready when you are.' : `${name}’s notes are ready.`}
                 hint="doctor.ai reads this before it says hello. Tap anything to change it."
               >
-                <dl className="divide-y divide-gray-100 border-y border-gray-100">
-                  <Row label="What’s wrong" onEdit={() => goTo(1)}>
-                    {intake.concern.trim() || <Empty />}
-                  </Row>
-                  <Row label="Where" onEdit={() => goTo(2)}>
-                    {intake.areas.join(', ') || <Empty />}
-                  </Row>
-                  <Row label="Started" onEdit={() => goTo(3)}>
-                    {intake.since ? SINCE_LABELS[intake.since] : <Empty />}
-                  </Row>
-                  <Row label="How bad" onEdit={() => goTo(4)}>
-                    {intake.severity ? (
-                      `${intake.severity}/10 · ${severityWord(intake.severity)}`
-                    ) : (
-                      <Empty />
-                    )}
-                  </Row>
-                  <Row label="Emergency signs" onEdit={() => goTo(0)}>
-                    {emergency ? (
-                      <span className="text-danger">{intake.redFlags.join(', ')}</span>
-                    ) : (
-                      'None'
-                    )}
-                  </Row>
-                </dl>
+                {(q) => (
+                  <>
+                    <dl
+                      aria-labelledby={q.titleId}
+                      className="divide-y divide-gray-100 border-y border-gray-100"
+                    >
+                      <Row label="What’s wrong" onEdit={() => goTo(1)}>
+                        {intake.concern.trim() || <Empty />}
+                      </Row>
+                      <Row label="Where" onEdit={() => goTo(2)}>
+                        {intake.areas.join(', ') || <Empty />}
+                      </Row>
+                      <Row label="Started" onEdit={() => goTo(3)}>
+                        {intake.since ? SINCE_LABELS[intake.since] : <Empty />}
+                      </Row>
+                      <Row label="How bad" onEdit={() => goTo(4)}>
+                        {intake.severity ? (
+                          `${intake.severity}/10 · ${severityWord(intake.severity)}`
+                        ) : (
+                          <Empty />
+                        )}
+                      </Row>
+                      <Row label="Emergency signs" onEdit={() => goTo(0)}>
+                        {emergency ? (
+                          <span className="text-danger">{intake.redFlags.join(', ')}</span>
+                        ) : (
+                          'None'
+                        )}
+                      </Row>
+                    </dl>
+                  </>
+                )}
               </Question>
             )}
           </motion.div>
@@ -388,18 +447,22 @@ function Row({
   children: React.ReactNode;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onEdit}
-      className="group grid w-full grid-cols-[110px_1fr_auto] items-start gap-4 py-4 text-left sm:grid-cols-[150px_1fr_auto]"
-    >
-      <dt className="text-sm text-gray-500">{label}</dt>
+    <div className="group relative grid grid-cols-[110px_1fr_auto] items-start gap-4 py-4 sm:grid-cols-[150px_1fr_auto]">
+      <dt className="text-sm text-gray-600">{label}</dt>
       <dd className="line-clamp-3 text-[15px] text-gray-900">{children}</dd>
-      <Pencil className="mt-0.5 size-4 text-gray-300 transition-colors group-hover:text-gray-900" />
-    </button>
+      {/* The whole row is the tap target; the button is what keyboards and screen readers use. */}
+      <button
+        type="button"
+        onClick={onEdit}
+        aria-label={`Change ${label.toLowerCase()}`}
+        className="-my-2 grid size-10 place-items-center rounded-full text-gray-500 transition-colors group-hover:text-gray-900 after:absolute after:inset-0 hover:bg-gray-100"
+      >
+        <Pencil aria-hidden className="size-4" />
+      </button>
+    </div>
   );
 }
 
 function Empty() {
-  return <span className="text-gray-400">Not added</span>;
+  return <span className="text-gray-500">Not added</span>;
 }

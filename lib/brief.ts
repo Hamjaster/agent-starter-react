@@ -17,7 +17,7 @@ export const BODY_AREAS = [
 export const SINCE_LABELS: Record<Exclude<Since, ''>, string> = {
   today: 'Today',
   'few-days': '1–3 days',
-  'this-week': 'This week',
+  'this-week': '4–7 days',
   longer: 'Longer than a week',
 };
 
@@ -72,6 +72,12 @@ export function buildBrief(profile: Profile, intake: Intake) {
   if (profile.conditions.trim()) lines.push(`Conditions: ${profile.conditions.trim()}`);
   if (profile.medications.trim()) lines.push(`Medicines: ${profile.medications.trim()}`);
   if (profile.allergies.trim()) lines.push(`Allergies: ${profile.allergies.trim()}`);
+  if (profile.history?.trim()) lines.push(`History: ${profile.history.trim()}`);
+  // The newest few, kept short: the brief travels in a URL and a 4,000-character attribute.
+  for (const d of (profile.documents ?? []).slice(-5)) {
+    const summary = d.summary.length > 220 ? `${d.summary.slice(0, 217)}…` : d.summary;
+    lines.push(`Document: ${d.title}${d.date ? ` (${d.date})` : ''}: ${summary}`);
+  }
   return lines.join('\n');
 }
 

@@ -17,8 +17,10 @@ emergency signs send patients to emergency care instead.
 | `motion/`                            | HyperFrames sources for the product films in `public/videos/`                                                 |
 | `scripts/avatar/`                    | Converts the Rocketbox avatar to the GLB used by the 3D doctor                                                |
 
-Patient profiles and notes stay in the browser (localStorage). They only leave the device when
-the patient sends them on WhatsApp or starts a video consult, where the notes travel as the
+Patient profiles and notes are saved in the browser (localStorage). When a patient builds a
+profile, what they write and any prescriptions or reports they attach are sent to Gemini through
+`app/api/extract/route.ts` to be read, then discarded. Notes otherwise leave the device only when
+the patient sends them on WhatsApp or starts a video consult, where they travel as the
 `saathi.brief` participant attribute.
 
 ## Run the site
@@ -26,7 +28,7 @@ the patient sends them on WhatsApp or starts a video consult, where the notes tr
 Requires Node 24 and pnpm.
 
 ```bash
-cp .env.example .env.local   # fill in LIVEKIT_* and SAATHI_WHATSAPP_NUMBER
+cp .env.example .env.local   # fill in LIVEKIT_*, SAATHI_WHATSAPP_NUMBER and GOOGLE_API_KEY
 pnpm install
 pnpm dev                     # http://localhost:3000
 ```
