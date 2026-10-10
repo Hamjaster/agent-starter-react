@@ -17,7 +17,7 @@ export const BODY_AREAS = [
 export const SINCE_LABELS: Record<Exclude<Since, ''>, string> = {
   today: 'Today',
   'few-days': '1–3 days',
-  'this-week': 'This week',
+  'this-week': '4–7 days',
   longer: 'Longer than a week',
 };
 
@@ -39,6 +39,13 @@ export const RED_FLAGS = [
   'Thoughts of harming yourself',
 ] as const;
 
+export const SELF_HARM_FLAG: (typeof RED_FLAGS)[number] = 'Thoughts of harming yourself';
+
+/** Where the emergency guidance sends people. doctor.ai's patients are in Pakistan. */
+export const EMERGENCY_LINE = { name: 'Rescue 1122', tel: '1122' };
+/** Free, confidential 24/7 mental health helpline. */
+export const CRISIS_LINE = { name: 'Umang', tel: '+923117786264', display: '0311 778 6264' };
+
 export function firstName(name: string) {
   return name.trim().split(/\s+/)[0] ?? '';
 }
@@ -56,8 +63,8 @@ export function buildBrief(profile: Profile, intake: Intake) {
   const lines = [
     `doctor.ai consult ${intake.ref || ''}`.trim(),
     `Patient: ${who}${profile.age ? `, ${profile.age}` : ''}${profile.sex ? `, ${profile.sex}` : ''}`,
-    `Concern: ${intake.concern.trim()}`,
   ];
+  if (intake.concern.trim()) lines.push(`Concern: ${intake.concern.trim()}`);
   if (intake.areas.length) lines.push(`Where: ${intake.areas.join(', ')}`);
   if (intake.since) lines.push(`Started: ${SINCE_LABELS[intake.since]}`);
   if (intake.severity) lines.push(`Severity: ${intake.severity}/10`);
@@ -65,6 +72,19 @@ export function buildBrief(profile: Profile, intake: Intake) {
   if (profile.conditions.trim()) lines.push(`Conditions: ${profile.conditions.trim()}`);
   if (profile.medications.trim()) lines.push(`Medicines: ${profile.medications.trim()}`);
   if (profile.allergies.trim()) lines.push(`Allergies: ${profile.allergies.trim()}`);
+  if (profile.history?.trim()) lines.push(`History: ${profile.history.trim()}`);
+  // The newest few, kept short: the brief travels in a URL and a 4,000-character attribute.
+  for (const d of (profile.documents ?? []).slice(-5)) {
+    const summary = d.summary.length > 220 ? `${d.summary.slice(0, 217)}…` : d.summary;
+    lines.push(`Document: ${d.title}${d.date ? ` (${d.date})` : ''}: ${summary}`);
+  }
+  return lines.join('\n');
+}
+
+/** The brief for a visitor without a profile: just what they typed on the home page. */
+export function buildGuestBrief(concern: string, ref: string) {
+  const lines = [`doctor.ai consult ${ref}`.trim(), 'Patient: a visitor without a profile'];
+  if (concern.trim()) lines.push(`Concern: ${concern.trim()}`);
   return lines.join('\n');
 }
 

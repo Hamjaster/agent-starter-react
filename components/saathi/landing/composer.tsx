@@ -3,7 +3,7 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowUp, ImagePlus, Mic, Phone, Stethoscope, X, Zap } from 'lucide-react';
+import { ImagePlus, Phone, UserRound, Video, X } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { EASE_OUT } from '@/components/saathi/motion';
 import { cn } from '@/lib/cn';
@@ -18,14 +18,14 @@ const EXAMPLES = [
 ];
 
 const SUGGESTIONS = [
-  { href: '/dashboard', label: 'Start symptom check', icon: Zap },
   { href: '/consult', label: 'Call on WhatsApp', icon: Phone },
-  { href: '/consult/video', label: 'Video consult', icon: Stethoscope },
+  { href: '/dashboard', label: 'Set up a health profile', icon: UserRound },
 ];
 
 /**
- * The hero's "tell doctor.ai" composer. What's typed is stashed and carried to the dashboard,
- * where it becomes today's concern.
+ * The hero's "tell doctor.ai" composer. Sending starts a video consult: what's typed is stashed
+ * and handed to doctor.ai as the brief, and becomes today's concern if a profile exists. The
+ * suggestion links carry the text along too.
  */
 export function Composer({ delay = 0 }: { delay?: number }) {
   const reduce = useReducedMotion();
@@ -56,10 +56,13 @@ export function Composer({ delay = 0 }: { delay?: number }) {
 
   useEffect(() => () => void (photo && URL.revokeObjectURL(photo.url)), [photo]);
 
+  const carry = () => {
+    if (ready) savePendingConcern(text);
+  };
   const submit = () => {
     if (!ready) return;
-    savePendingConcern(text);
-    router.push('/dashboard');
+    carry();
+    router.push('/consult/video');
   };
 
   return (
@@ -105,7 +108,7 @@ export function Composer({ delay = 0 }: { delay?: number }) {
           {!text && (
             <div
               aria-hidden
-              className="pointer-events-none absolute inset-x-2 top-1.5 overflow-hidden text-base leading-relaxed text-gray-400 md:text-lg"
+              className="pointer-events-none absolute inset-x-2 top-1.5 overflow-hidden text-base leading-relaxed text-gray-500 md:text-lg"
             >
               <AnimatePresence mode="wait" initial={false}>
                 <motion.span
@@ -135,13 +138,13 @@ export function Composer({ delay = 0 }: { delay?: number }) {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={photo.url} alt="" className="size-10 rounded-lg object-cover" />
                 <p className="min-w-0 flex-1 text-xs leading-snug text-gray-600">
-                  Photo stays on this device. Show it to doctor.ai on a video consult.
+                  Photo stays on this device. Hold it up to the camera on the call.
                 </p>
                 <button
                   type="button"
                   aria-label="Remove photo"
                   onClick={() => setPhoto(null)}
-                  className="grid size-7 place-items-center rounded-full text-gray-500 hover:bg-gray-200"
+                  className="grid size-10 place-items-center rounded-full text-gray-500 hover:bg-gray-200"
                 >
                   <X className="size-3.5" />
                 </button>
@@ -166,16 +169,12 @@ export function Composer({ delay = 0 }: { delay?: number }) {
             <ToolButton label="Add a photo" onClick={() => file.current?.click()}>
               <ImagePlus className="size-[18px]" />
             </ToolButton>
-            <ToolButton label="Speak instead" onClick={() => router.push('/consult/video')}>
-              <Mic className="size-[18px]" />
-            </ToolButton>
-            <span className="ml-1 hidden text-xs text-gray-400 sm:inline">
-              Shift + Enter for a new line
+            <span className="ml-1 hidden text-xs text-gray-500 sm:inline">
+              Enter to start · Shift + Enter for a new line
             </span>
           </div>
           <motion.button
             type="submit"
-            aria-label="Send to doctor.ai"
             disabled={!ready}
             animate={
               reduce
@@ -188,13 +187,14 @@ export function Composer({ delay = 0 }: { delay?: number }) {
             whileTap={ready ? { scale: 0.9 } : undefined}
             transition={{ type: 'spring', stiffness: 420, damping: 24 }}
             className={cn(
-              'grid size-11 shrink-0 place-items-center rounded-full transition-colors',
+              'inline-flex h-11 shrink-0 items-center gap-2 rounded-full px-5 text-sm font-medium transition-colors',
               ready
                 ? 'bg-brand hover:bg-brand-2 text-white shadow-lg shadow-gray-900/20'
-                : 'cursor-not-allowed bg-gray-200 text-gray-500'
+                : 'cursor-not-allowed bg-gray-200 text-gray-600'
             )}
           >
-            <ArrowUp className="size-5" />
+            <Video aria-hidden className="size-4" />
+            Talk on video
           </motion.button>
         </div>
       </form>
@@ -211,6 +211,7 @@ export function Composer({ delay = 0 }: { delay?: number }) {
           >
             <Link
               href={href}
+              onClick={carry}
               className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-700 shadow-sm transition-[border-color,box-shadow,color] hover:border-gray-300 hover:text-gray-900 hover:shadow-md"
             >
               <Icon className="size-4 text-gray-500" />
@@ -238,7 +239,7 @@ function ToolButton({
       aria-label={label}
       title={label}
       onClick={onClick}
-      className="grid size-10 place-items-center rounded-full text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
+      className="grid size-11 place-items-center rounded-full text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
     >
       {children}
     </button>

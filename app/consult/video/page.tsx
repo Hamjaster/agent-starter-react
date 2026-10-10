@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { VideoConsult } from '@/components/saathi/video/video-consult';
 
-export const metadata: Metadata = { title: 'Video consult · doctor.ai' };
+export const metadata: Metadata = { title: 'Video consult' };
 export const dynamic = 'force-dynamic';
 
 export default function VideoConsultPage() {

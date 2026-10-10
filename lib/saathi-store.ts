@@ -13,6 +13,24 @@ export type Sex = 'female' | 'male' | 'other' | '';
 export type Since = 'today' | 'few-days' | 'this-week' | 'longer' | '';
 export type Channel = 'whatsapp-chat' | 'whatsapp-call' | 'video';
 
+export type DocumentKind =
+  | 'prescription'
+  | 'lab-report'
+  | 'discharge-summary'
+  | 'medicine-pack'
+  | 'other';
+
+/** What doctor.ai read from an uploaded prescription or report. The file itself isn't kept. */
+export interface HealthDocument {
+  id: string;
+  title: string;
+  kind: DocumentKind;
+  /** As written on the document, e.g. "12 Mar 2026". */
+  date: string;
+  summary: string;
+  addedAt: number;
+}
+
 export interface Profile {
   id: string;
   name: string;
@@ -20,9 +38,15 @@ export interface Profile {
   age: string;
   sex: Sex;
   phone: string;
+  /** Comma-separated. */
   conditions: string;
+  /** Semicolon-separated, each with its dose as written. */
   medications: string;
+  /** Comma-separated. */
   allergies: string;
+  /** Past surgeries, pregnancies, family history and anything else worth knowing. */
+  history?: string;
+  documents?: HealthDocument[];
 }
 
 export interface Intake {

@@ -61,16 +61,17 @@ export function Hero() {
       const t = setTimeout(() => setHello(false), 3600);
       return () => clearTimeout(t);
     }
+    if (reduce) return;
     const t = setInterval(() => setI((v) => (v + 1) % SCRIPT.length), 3800);
     return () => clearInterval(t);
-  }, [hello]);
+  }, [hello, reduce]);
 
   const onPoke = useCallback(() => setHello(true), []);
 
   return (
     <section
       ref={section}
-      className="relative isolate overflow-hidden bg-gradient-to-b from-white via-white to-[#e6ebe9]"
+      className="to-mist-2 relative isolate overflow-hidden bg-gradient-to-b from-white via-white"
     >
       {/* Soft halo behind the doctor */}
       <div
@@ -104,7 +105,7 @@ export function Hero() {
             initial={reduce ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8, delay: 1.7 }}
-            className="mt-6 max-w-md text-xs leading-relaxed text-gray-500"
+            className="mt-6 max-w-md text-xs leading-relaxed text-gray-600"
           >
             doctor.ai is an AI, not a replacement for your doctor. In an emergency, call your local
             emergency number.
@@ -114,7 +115,7 @@ export function Hero() {
         {/* The doctor: dominates the right of the hero, cropped at the chest like a close-up. */}
         <motion.div
           style={reduce ? undefined : { y: avatarY }}
-          className="relative order-1 -mx-6 h-[64svh] min-h-[440px] md:mx-0 lg:absolute lg:inset-y-0 lg:right-[-3vw] lg:order-none lg:h-auto lg:min-h-0 lg:w-[60vw]"
+          className="relative order-1 -mx-6 h-[46svh] max-h-[520px] min-h-[300px] md:mx-0 md:h-[60svh] lg:absolute lg:inset-y-0 lg:right-[-3vw] lg:order-none lg:h-auto lg:min-h-0 lg:w-[60vw]"
         >
           <AvatarStage
             drive={drive}
@@ -123,9 +124,10 @@ export function Hero() {
             className="absolute inset-0 [mask-image:linear-gradient(to_bottom,black_78%,transparent_100%)]"
           />
 
-          {/* Subtitles: what's being said on the demo call. */}
+          {/* Subtitles: what's being said on the demo call. Decorative, so screen readers skip
+              the loop instead of hearing it every few seconds. */}
           <div
-            aria-live="polite"
+            aria-hidden
             className="pointer-events-none absolute inset-x-0 bottom-[6%] flex justify-center px-6 lg:bottom-[9%]"
           >
             <AnimatePresence mode="wait">

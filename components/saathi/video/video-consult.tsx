@@ -7,9 +7,12 @@ import { useRouter } from 'next/navigation';
 import { LocalVideoTrack, TokenSource, Track } from 'livekit-client';
 import {
   ArrowLeft,
+  ArrowRight,
   ArrowUp,
   Camera,
   CameraOff,
+  Check,
+  Copy,
   Mic,
   MicOff,
   PhoneOff,
@@ -29,76 +32,113 @@ import {
   useTrackToggle,
   useTrackVolume,
 } from '@livekit/components-react';
-import { AmbientBg, AnimatedText, EASE_OUT, PageSkeleton } from '@/components/saathi/motion';
+import { buttonClass } from '@/components/saathi/button';
+import {
+  AmbientBg,
+  AnimatedText,
+  EASE_OUT,
+  PageSkeleton,
+  Viewfinder,
+  rise,
+} from '@/components/saathi/motion';
 import type { AvatarDrive, AvatarMood } from '@/components/saathi/three/types';
+import { AppHeader } from '@/components/saathi/ui';
 import { Wordmark } from '@/components/saathi/wordmark';
-import { buildBrief, firstName } from '@/lib/brief';
+import { EMERGENCY_LINE, buildBrief, buildGuestBrief, firstName } from '@/lib/brief';
 import { cn } from '@/lib/cn';
-import { type Intake, type Profile, actions, useHydrated, useSaathi } from '@/lib/saathi-store';
+import { peekPendingConcern, takePendingConcern } from '@/lib/pending-concern';
+import {
+  type Intake,
+  type Profile,
+  actions,
+  emptyIntake,
+  newRef,
+  useHydrated,
+  useSaathi,
+} from '@/lib/saathi-store';
 
 const AvatarStage = dynamic(() => import('@/components/saathi/three/avatar-stage'), {
   ssr: false,
   loading: () => null,
 });
 
+/** Stand-in profile for a visitor who starts a consult from the home page without one. */
+const GUEST: Profile = {
+  id: 'guest',
+  name: '',
+  relation: 'self',
+  age: '',
+  sex: '',
+  phone: '',
+  conditions: '',
+  medications: '',
+  allergies: '',
+};
+
 export function VideoConsult({ agentName }: { agentName?: string }) {
   const hydrated = useHydrated();
   const state = useSaathi();
   const profile = state.profiles.find((p) => p.id === state.activeId) ?? state.profiles[0];
   const intake = profile ? state.intakes[profile.id] : undefined;
+  const hasNotes = !!intake && intake.concern.trim().length >= 3;
+  // What was typed in the home page box: today's concern for a profile, or a guest's brief.
+  const pending = hydrated ? peekPendingConcern() : null;
 
-  if (!hydrated) return <PageSkeleton />;
+  useEffect(() => {
+    if (!hydrated || !profile || hasNotes) return;
+    const text = takePendingConcern();
+    if (text) actions.updateIntake(profile.id, { concern: text });
+  }, [hydrated, profile, hasNotes]);
 
-  if (!profile || !intake || intake.concern.trim().length < 3) {
+  // Wait for the store (and for a pending concern to land) before freezing the brief.
+  if (!hydrated || (profile && !hasNotes && pending)) return <PageSkeleton />;
+
+  if (!profile) {
     return (
-      <div className="grid min-h-svh place-items-center bg-white px-6 text-center">
-        <div>
-          <AnimatedText
-            as="h1"
-            text="Start with your notes."
-            className="font-display tracking-display text-4xl text-gray-900 md:text-5xl"
-          />
-          <p className="mt-3 text-gray-600">
-            doctor.ai reads them before the video consult begins.
-          </p>
-          <Link
-            href="/dashboard"
-            className="bg-brand mt-8 inline-flex rounded-lg px-6 py-3.5 font-medium text-white"
-          >
-            Go to my dashboard
-          </Link>
-        </div>
-      </div>
+      <ConsultSession
+        guest
+        profile={GUEST}
+        intake={{ ...emptyIntake(), concern: pending ?? '' }}
+        agentName={agentName}
+      />
     );
   }
-
-  return <ConsultSession profile={profile} intake={intake} agentName={agentName} />;
+  return (
+    <ConsultSession profile={profile} intake={intake ?? emptyIntake()} agentName={agentName} />
+  );
 }
 
 function ConsultSession({
   profile,
-  intake,
+  intake: stored,
+  guest = false,
   agentName,
 }: {
   profile: Profile;
   intake: Intake;
+  guest?: boolean;
   agentName?: string;
 }) {
   const tokenSource = useMemo(() => TokenSource.endpoint('/api/token'), []);
+  // A guest's token lives only for this consult; a profile's is kept in the store.
+  const [guestRef] = useState(() => (guest ? newRef() : ''));
+  const intake = guest ? { ...stored, ref: guestRef } : stored;
   // Freeze the brief at mount so typing elsewhere can't change it mid-call.
-  const [brief] = useState(() => buildBrief(profile, intake));
+  const [brief] = useState(() =>
+    guest ? buildGuestBrief(intake.concern, guestRef) : buildBrief(profile, intake)
+  );
   const session = useSession(tokenSource, {
     // Only pass agentName when it's set. livekit-client copies every key it's given, and an
     // undefined agentName can't be encoded, so the token request fails before it's sent.
     ...(agentName ? { agentName } : {}),
-    participantName: profile.name,
+    participantName: profile.name || 'Guest',
     participantAttributes: { 'saathi.brief': brief, 'saathi.ref': intake.ref },
     agentConnectTimeoutMilliseconds: 25_000,
   });
 
   return (
     <SessionProvider session={session}>
-      <Stage profile={profile} intake={intake} />
+      <Stage profile={profile} intake={intake} guest={guest} />
       <RoomAudioRenderer />
     </SessionProvider>
   );
@@ -106,9 +146,11 @@ function ConsultSession({
 
 type Phase = 'ready' | 'live' | 'ended';
 
-function Stage({ profile, intake }: { profile: Profile; intake: Intake }) {
+function Stage({ profile, intake, guest }: { profile: Profile; intake: Intake; guest: boolean }) {
   const session = useSessionContext();
   const agent = useAgent();
+  // One subscription for the whole consult: captions, transcript and the ended recap read it.
+  const chat = useSessionMessages(session);
   const [phase, setPhase] = useState<Phase>('ready');
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -117,11 +159,11 @@ function Stage({ profile, intake }: { profile: Profile; intake: Intake }) {
     setError(null);
     setStarting(true);
     try {
-      actions.ensureRef(profile.id);
+      if (!guest) actions.ensureRef(profile.id);
       await session.start({
         tracks: { microphone: { enabled: true }, camera: { enabled: true } },
       });
-      actions.logConsult(profile.id, 'video');
+      if (!guest) actions.logConsult(profile.id, 'video');
       setPhase('live');
     } catch (e) {
       setError(
@@ -153,19 +195,22 @@ function Stage({ profile, intake }: { profile: Profile; intake: Intake }) {
     }
   }, [phase, agent.state, agent.failureReasons, session]);
 
-  if (phase === 'ended') return <Ended profile={profile} intake={intake} />;
+  if (phase === 'ended') {
+    return <Ended profile={profile} intake={intake} guest={guest} messages={chat.messages} />;
+  }
   if (phase === 'ready' || !session.isConnected) {
     return (
       <Lobby
         profile={profile}
         intake={intake}
+        guest={guest}
         starting={starting || phase === 'live'}
         error={error}
         onStart={start}
       />
     );
   }
-  return <Live profile={profile} intake={intake} onEnd={end} />;
+  return <Live profile={profile} intake={intake} chat={chat} onEnd={end} />;
 }
 
 /* ───────────────────────── Lobby ───────────────────────── */
@@ -173,29 +218,31 @@ function Stage({ profile, intake }: { profile: Profile; intake: Intake }) {
 function Lobby({
   profile,
   intake,
+  guest,
   starting,
   error,
   onStart,
 }: {
   profile: Profile;
   intake: Intake;
+  guest: boolean;
   starting: boolean;
   error: string | null;
   onStart: () => void;
 }) {
   const drive = useRef<AvatarDrive>({ level: 0, mood: 'idle', synthetic: true });
   return (
-    <div className="min-h-svh bg-gradient-to-b from-white to-[#e6ebe9]">
-      <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5 md:px-12">
+    <div className="to-mist-2 min-h-svh bg-gradient-to-b from-white">
+      <AppHeader>
         <Wordmark />
         <Link
-          href="/consult"
-          className="inline-flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900"
+          href={guest ? '/' : '/consult'}
+          className="inline-flex min-h-11 items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900"
         >
           <ArrowLeft className="size-4" /> Back
         </Link>
-      </header>
-      <main className="mx-auto grid max-w-6xl items-center gap-6 px-6 pb-16 md:px-12 lg:grid-cols-[1fr_0.9fr]">
+      </AppHeader>
+      <main className="mx-auto grid max-w-6xl items-center gap-6 px-6 pt-6 pb-16 md:px-12 lg:grid-cols-[1fr_0.9fr]">
         <div className="order-2 lg:order-1">
           <AnimatedText
             as="h1"
@@ -206,9 +253,13 @@ function Lobby({
             {[
               'Sit near a window or a bright light. Daylight shows colour best.',
               'Keep any medicines or reports you want to ask about within reach.',
-              `doctor.ai has read ${
-                profile.relation === 'self' ? 'your' : `${firstName(profile.name)}’s`
-              } notes, so you can start with what’s changed.`,
+              guest
+                ? intake.concern.trim()
+                  ? 'doctor.ai has read what you typed, so you can start from there.'
+                  : 'When doctor.ai says hello, tell it what’s wrong in your own words.'
+                : `doctor.ai has read ${
+                    profile.relation === 'self' ? 'your' : `${firstName(profile.name)}’s`
+                  } notes, so you can start with what’s changed.`,
             ].map((t, i) => (
               <motion.li
                 key={t}
@@ -225,7 +276,7 @@ function Lobby({
           {error && (
             <p
               role="alert"
-              className="bg-danger mt-8 rounded-xl px-5 py-4 text-sm leading-relaxed text-white"
+              className="mt-8 rounded-xl border border-gray-300 bg-white px-5 py-4 text-sm leading-relaxed text-gray-900"
             >
               {error}
             </p>
@@ -237,7 +288,7 @@ function Lobby({
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.9 }}
-            className="bg-brand hover:bg-brand-2 mt-10 inline-flex w-full items-center justify-center gap-2 rounded-lg px-6 py-4 text-lg font-medium text-white transition-colors disabled:opacity-70 sm:w-auto"
+            className={buttonClass({ size: 'lg' }, 'mt-10 w-full sm:w-auto')}
           >
             <Camera className="size-5" />
             {starting ? 'Connecting…' : 'Start video consult'}
@@ -246,6 +297,17 @@ function Lobby({
             Token {intake.ref}. Your browser will ask for camera and microphone access. doctor.ai is
             an AI, not a doctor who can examine you.
           </p>
+          {guest && (
+            <p className="mt-3 text-sm text-gray-600">
+              Want doctor.ai to know your medicines and allergies first?{' '}
+              <Link
+                href="/dashboard"
+                className="font-medium text-gray-900 underline underline-offset-4"
+              >
+                Set up a health profile
+              </Link>
+            </p>
+          )}
         </div>
         <div className="relative order-1 h-[38svh] min-h-[260px] lg:order-2 lg:h-[min(70vh,640px)]">
           <AvatarStage
@@ -276,10 +338,20 @@ const STATE_LABEL: Record<string, string> = {
 
 const glass = 'bg-white/[0.06] ring-1 ring-white/10 backdrop-blur-xl';
 
-function Live({ profile, intake, onEnd }: { profile: Profile; intake: Intake; onEnd: () => void }) {
+type SessionChat = ReturnType<typeof useSessionMessages>;
+
+function Live({
+  profile,
+  intake,
+  chat,
+  onEnd,
+}: {
+  profile: Profile;
+  intake: Intake;
+  chat: SessionChat;
+  onEnd: () => void;
+}) {
   const session = useSessionContext();
-  // One subscription for the whole call: the captions and the transcript both read it.
-  const chat = useSessionMessages(session);
   const cameraRef = session.local.cameraTrack;
   const cam = useTrackToggle({ source: Track.Source.Camera });
   const mic = useTrackToggle({ source: Track.Source.Microphone });
@@ -302,6 +374,7 @@ function Live({ profile, intake, onEnd }: { profile: Profile; intake: Intake; on
   return (
     <div className="bg-brand relative isolate flex h-svh flex-col overflow-hidden text-white">
       <AmbientBg className="-z-10" />
+      <h1 className="sr-only">Video consult with doctor.ai</h1>
 
       <header className="flex shrink-0 items-center justify-between gap-4 px-4 py-3 sm:px-5 lg:px-6 lg:py-4">
         <div className="flex items-center gap-3">
@@ -320,14 +393,14 @@ function Live({ profile, intake, onEnd }: { profile: Profile; intake: Intake; on
         </p>
       </header>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-3 px-3 pb-3 sm:px-4 sm:pb-4 lg:grid lg:grid-cols-[1fr_400px] lg:gap-4 lg:px-5 lg:pb-5">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 px-3 pb-3 sm:px-4 sm:pb-4 lg:grid lg:grid-cols-[1fr_400px] lg:gap-4 lg:px-5 lg:pb-5 max-lg:landscape:grid max-lg:landscape:grid-cols-[1fr_minmax(0,320px)]">
         {/* What doctor.ai sees */}
         <motion.section
           aria-label="Your camera"
           initial={{ opacity: 0, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.7, ease: EASE_OUT }}
-          className="relative min-h-0 flex-1 overflow-hidden rounded-[28px] bg-[#1c2322] shadow-[0_40px_80px_-40px_rgb(0_0_0/0.7)] ring-1 ring-white/10"
+          className="bg-brand-ink relative min-h-0 flex-1 overflow-hidden rounded-[28px] shadow-[0_40px_80px_-40px_rgb(0_0_0/0.7)] ring-1 ring-white/10"
         >
           {cameraOn && cameraRef ? (
             <VideoTrack
@@ -355,7 +428,10 @@ function Live({ profile, intake, onEnd }: { profile: Profile; intake: Intake; on
                   type="button"
                   onClick={() => cam.toggle()}
                   disabled={cam.pending}
-                  className="mt-6 hidden items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-medium text-gray-900 transition-transform hover:-translate-y-0.5 disabled:opacity-60 sm:inline-flex"
+                  className={buttonClass(
+                    { variant: 'inverse', size: 'sm' },
+                    'sm:tall:inline-flex mt-6 hidden'
+                  )}
                 >
                   <Camera className="size-4" /> Turn camera on
                 </button>
@@ -372,7 +448,10 @@ function Live({ profile, intake, onEnd }: { profile: Profile; intake: Intake; on
             aria-hidden
             className="pointer-events-none absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-black/65 to-transparent"
           />
-          <Viewfinder scanning={cameraOn} />
+          <Viewfinder
+            scanning={cameraOn}
+            className="inset-x-6 top-16 bottom-6 sm:inset-x-10 sm:bottom-10"
+          />
 
           <p
             className={cn(
@@ -380,7 +459,7 @@ function Live({ profile, intake, onEnd }: { profile: Profile; intake: Intake; on
               'absolute top-4 left-4 inline-flex items-center gap-2 rounded-full bg-black/30 px-3 py-1.5 text-xs font-medium'
             )}
           >
-            <span className="bg-wa size-1.5 rounded-full" />
+            <span className="size-1.5 rounded-full bg-white" />
             What doctor.ai sees
             {facing === 'environment' && <span className="text-white/55">· Back camera</span>}
           </p>
@@ -437,11 +516,11 @@ function Live({ profile, intake, onEnd }: { profile: Profile; intake: Intake; on
           transition={{ duration: 0.7, ease: EASE_OUT, delay: 0.15 }}
           className={cn(
             glass,
-            'flex max-h-[44svh] min-h-0 flex-col overflow-hidden rounded-[28px] lg:max-h-none'
+            'flex max-h-[44svh] min-h-0 flex-col overflow-hidden rounded-[28px] lg:max-h-none max-lg:landscape:max-h-none'
           )}
         >
           <Presence />
-          <Transcript patientName={firstName(profile.name)} chat={chat} />
+          <Transcript patientName={firstName(profile.name) || 'You'} chat={chat} />
         </motion.aside>
       </div>
 
@@ -472,8 +551,8 @@ function LiveBadge() {
       )}
     >
       <span className="relative flex size-2">
-        <span className="bg-danger absolute inset-0 animate-ping rounded-full opacity-60" />
-        <span className="bg-danger relative size-2 rounded-full" />
+        <span className="absolute inset-0 animate-ping rounded-full bg-white opacity-50" />
+        <span className="relative size-2 rounded-full bg-white" />
       </span>
       Live <span className="text-white/55">{clock}</span>
     </span>
@@ -520,28 +599,6 @@ function ControlButton({
       )}
       {children}
     </motion.button>
-  );
-}
-
-/** Corner brackets: the frame is the exam light, not decoration. */
-function Viewfinder({ scanning }: { scanning: boolean }) {
-  const reduce = useReducedMotion();
-  const corner = 'absolute size-10 border-white/60';
-  return (
-    <div
-      aria-hidden
-      className="pointer-events-none absolute inset-x-6 top-16 bottom-6 sm:inset-x-10 sm:top-16 sm:bottom-10"
-    >
-      <span className={cn(corner, 'top-0 left-0 rounded-tl-2xl border-t-2 border-l-2')} />
-      <span className={cn(corner, 'top-0 right-0 rounded-tr-2xl border-t-2 border-r-2')} />
-      <span className={cn(corner, 'bottom-0 left-0 rounded-bl-2xl border-b-2 border-l-2')} />
-      <span className={cn(corner, 'right-0 bottom-0 rounded-br-2xl border-r-2 border-b-2')} />
-      {scanning && !reduce && (
-        <div className="absolute inset-x-3 top-0 h-[60%] opacity-60">
-          <div className="animate-scan h-px w-full bg-gradient-to-r from-transparent via-white/70 to-transparent shadow-[0_0_24px_4px_rgb(255_255_255/0.2)]" />
-        </div>
-      )}
-    </div>
   );
 }
 
@@ -681,8 +738,8 @@ function StateGlyph({ state, level }: { state: string; level: number }) {
   if (state === 'listening') {
     return (
       <span aria-hidden className="relative flex size-2">
-        <span className="bg-wa absolute inset-0 animate-ping rounded-full opacity-50" />
-        <span className="bg-wa relative size-2 rounded-full" />
+        <span className="absolute inset-0 animate-ping rounded-full bg-white opacity-40" />
+        <span className="relative size-2 rounded-full bg-white" />
       </span>
     );
   }
@@ -718,15 +775,19 @@ function AgentText({ text }: { text: string }) {
   return <span className="whitespace-pre-line text-white">{parts}</span>;
 }
 
-function Transcript({
-  patientName,
-  chat,
-}: {
-  patientName: string;
-  chat: ReturnType<typeof useSessionMessages>;
-}) {
+function Transcript({ patientName, chat }: { patientName: string; chat: SessionChat }) {
   const { messages, send, isSending } = chat;
   const agent = useAgent();
+  // Screen readers hear each reply once it's finished, not every streamed word.
+  const [announce, setAnnounce] = useState('');
+  const lastState = useRef(agent.state);
+  useEffect(() => {
+    if (lastState.current === 'speaking' && agent.state !== 'speaking') {
+      const last = messages.findLast((m) => m.from?.isLocal !== true);
+      if (last) setAnnounce(`doctor.ai: ${plain(last.message)}`);
+    }
+    lastState.current = agent.state;
+  }, [agent.state, messages]);
   const [draft, setDraft] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
   const thinking = agent.state === 'thinking';
@@ -737,9 +798,11 @@ function Transcript({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
+      <p aria-live="polite" className="sr-only">
+        {announce}
+      </p>
       <div
         className="scrollbar-hide min-h-0 flex-1 overflow-y-auto px-4 py-4 lg:px-5"
-        aria-live="polite"
         data-lenis-prevent
       >
         {messages.length === 0 ? (
@@ -747,7 +810,7 @@ function Transcript({
             <p className="font-display tracking-display-sm text-lg text-white/80">
               Just talk, like on a phone call.
             </p>
-            <p className="mt-1 text-sm text-white/45">
+            <p className="mt-1 text-sm text-white/65">
               Captions appear here as you and doctor.ai talk.
             </p>
           </div>
@@ -771,7 +834,7 @@ function Transcript({
                     )}
                   >
                     {first && (
-                      <span className="mb-1.5 px-1 text-[11px] font-medium tracking-wide text-white/45 uppercase">
+                      <span className="mb-1.5 px-1 text-[11px] font-medium tracking-wide text-white/65 uppercase">
                         {mine ? patientName : 'doctor.ai'}
                       </span>
                     )}
@@ -827,14 +890,14 @@ function Transcript({
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             placeholder="Type instead of speaking"
-            className="h-9 min-w-0 flex-1 bg-transparent text-sm text-white placeholder:text-white/40 focus:outline-none"
+            className="h-10 min-w-0 flex-1 bg-transparent text-base text-white placeholder:text-white/55 focus:outline-none"
           />
           <motion.button
             type="submit"
             aria-label="Send message"
             disabled={!draft.trim() || isSending}
             whileTap={{ scale: 0.9 }}
-            className="grid size-9 shrink-0 place-items-center rounded-full bg-white text-gray-900 transition-opacity disabled:opacity-30"
+            className="grid size-10 shrink-0 place-items-center rounded-full bg-white text-gray-900 transition-opacity disabled:opacity-30"
           >
             <ArrowUp className="size-4" />
           </motion.button>
@@ -846,39 +909,136 @@ function Transcript({
 
 /* ───────────────────────── Ended ───────────────────────── */
 
-function Ended({ profile, intake }: { profile: Profile; intake: Intake }) {
+/** Markdown links and bold to plain text; links keep their URL only where asked (copied notes). */
+function plain(text: string, urls = false) {
+  return text
+    .replace(/\[([^\]]+)\]\((https?:[^)]+)\)/g, urls ? '$1 ($2)' : '$1')
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .trim();
+}
+
+function Ended({
+  profile,
+  intake,
+  guest,
+  messages,
+}: {
+  profile: Profile;
+  intake: Intake;
+  guest: boolean;
+  messages: ReceivedMessage[];
+}) {
   const router = useRouter();
+  const [copied, setCopied] = useState(false);
+  const name = firstName(profile.name);
+  const said = messages.filter((m) => m.from?.isLocal !== true && m.message.trim());
+  const recap = said.slice(-3);
+
+  const copyNotes = async () => {
+    const lines = [`doctor.ai consult ${intake.ref}`];
+    if (intake.concern.trim()) lines.push(`Concern: ${intake.concern.trim()}`);
+    lines.push('');
+    for (const m of messages) {
+      if (!m.message.trim()) continue;
+      lines.push(`${m.from?.isLocal ? name || 'Me' : 'doctor.ai'}: ${plain(m.message, true)}`);
+    }
+    try {
+      await navigator.clipboard.writeText(lines.join('\n'));
+      setCopied(true);
+    } catch {
+      // Clipboard blocked: nothing to do, the recap is still on screen.
+    }
+  };
+
   return (
-    <div className="grid min-h-svh place-items-center bg-gradient-to-b from-white to-[#eef1f0] px-6 py-16">
-      <div className="w-full max-w-md text-center">
+    <div className="to-mist min-h-svh bg-gradient-to-b from-white">
+      <AppHeader>
+        <Wordmark />
+      </AppHeader>
+      <main className="mx-auto max-w-xl px-6 py-12 md:py-16">
         <AnimatedText
           as="h1"
-          text={`Take care, ${firstName(profile.name)}.`}
+          text={name ? `Take care, ${name}.` : 'Take care.'}
           className="font-display tracking-display text-4xl leading-[1.05] text-gray-900 md:text-6xl"
         />
         <p className="mt-4 leading-relaxed text-gray-600">
-          Your token was {intake.ref}. If things get worse, or anything new appears, start another
-          consult. If it becomes an emergency, call your local emergency number.
+          Your token was <span className="text-gray-900 tabular-nums">{intake.ref}</span>. If things
+          get worse, or anything new appears, start another consult.
         </p>
-        <div className="mt-10 flex flex-col items-center gap-3">
-          <button
-            type="button"
-            onClick={() => {
-              actions.closeIntake(profile.id);
-              router.push('/dashboard');
-            }}
-            className="bg-brand w-full rounded-lg px-6 py-3.5 font-medium text-white sm:w-auto"
+
+        {recap.length > 0 && (
+          <motion.section
+            {...rise(0.3)}
+            aria-labelledby="recap-title"
+            className="mt-8 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6"
           >
-            Done, back to my dashboard
-          </button>
-          <Link
-            href="/consult"
-            className="text-sm text-gray-500 underline-offset-4 hover:underline"
-          >
-            Continue on WhatsApp instead
-          </Link>
-        </div>
-      </div>
+            <h2 id="recap-title" className="font-display tracking-display-sm text-xl text-gray-900">
+              What doctor.ai said last
+            </h2>
+            <ul className="mt-4 flex flex-col gap-3">
+              {recap.map((m) => (
+                <li
+                  key={m.id}
+                  className="rounded-xl bg-gray-50 px-4 py-3 text-[15px] leading-relaxed whitespace-pre-line text-gray-800"
+                >
+                  {plain(m.message)}
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              onClick={copyNotes}
+              className={buttonClass({ variant: 'outline', size: 'sm' }, 'mt-4')}
+            >
+              {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+              {copied ? 'Copied' : 'Copy consult notes'}
+            </button>
+          </motion.section>
+        )}
+
+        <motion.p
+          {...rise(0.4)}
+          className="border-danger/30 bg-danger-soft mt-6 rounded-xl border px-4 py-3 text-sm leading-relaxed text-gray-900"
+        >
+          If it becomes an emergency, call{' '}
+          <a href={`tel:${EMERGENCY_LINE.tel}`} className="font-semibold underline">
+            {EMERGENCY_LINE.tel}
+          </a>{' '}
+          or go to the nearest emergency department.
+        </motion.p>
+
+        <motion.div {...rise(0.5)} className="mt-10 flex flex-col gap-3 sm:flex-row">
+          {guest ? (
+            <>
+              <Link href="/dashboard" className={buttonClass({}, 'w-full sm:w-auto')}>
+                Save a health profile <ArrowRight className="size-4" />
+              </Link>
+              <Link href="/" className={buttonClass({ variant: 'outline' }, 'w-full sm:w-auto')}>
+                Back to home
+              </Link>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  actions.closeIntake(profile.id);
+                  router.push('/dashboard');
+                }}
+                className={buttonClass({}, 'w-full sm:w-auto')}
+              >
+                Done, back to my dashboard
+              </button>
+              <Link
+                href="/consult"
+                className={buttonClass({ variant: 'outline' }, 'w-full sm:w-auto')}
+              >
+                Continue on WhatsApp
+              </Link>
+            </>
+          )}
+        </motion.div>
+      </main>
     </div>
   );
 }

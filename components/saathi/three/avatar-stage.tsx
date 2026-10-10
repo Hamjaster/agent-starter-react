@@ -1,6 +1,7 @@
 'use client';
 
-import { Component, Suspense, useEffect, useMemo, useRef } from 'react';
+import { Component, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { useReducedMotion } from 'motion/react';
 import * as THREE from 'three';
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { Environment, Lightformer, useGLTF } from '@react-three/drei';
@@ -24,7 +25,8 @@ const damp = THREE.MathUtils.damp;
 const X_AXIS = new THREE.Vector3(1, 0, 0);
 const Z_AXIS = new THREE.Vector3(0, 0, 1);
 
-const pointer = { x: 0, y: 0 };
+const livePointer = { x: 0, y: 0 };
+const STILL = { x: 0, y: 0 };
 let pointerBound = false;
 function bindPointer() {
   if (pointerBound || typeof window === 'undefined') return;
@@ -32,8 +34,8 @@ function bindPointer() {
   window.addEventListener(
     'pointermove',
     (e) => {
-      pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
-      pointer.y = -((e.clientY / window.innerHeight) * 2 - 1);
+      livePointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+      livePointer.y = -((e.clientY / window.innerHeight) * 2 - 1);
     },
     { passive: true }
   );
@@ -253,10 +255,13 @@ function Doctor({
   drive,
   onPoke,
   framing,
+  still,
 }: {
   drive: React.RefObject<AvatarDrive>;
   onPoke?: () => void;
   framing: 'hero' | 'call';
+  /** Reduced motion: ignore the pointer (no head-follow or camera parallax). */
+  still: boolean;
 }) {
   const { scene } = useGLTF(MODEL_URL);
   const model = useMemo(() => SkeletonUtils.clone(scene), [scene]);
@@ -314,6 +319,7 @@ function Doctor({
   });
 
   useFrame((state, dt) => {
+    const pointer = still ? STILL : livePointer;
     const t = state.clock.elapsedTime;
     const d = drive.current;
     const mood = d?.mood ?? 'idle';
@@ -538,11 +544,29 @@ export default function AvatarStage({
   framing = 'hero',
   className,
 }: AvatarStageProps) {
+  const reduce = useReducedMotion() ?? false;
+  const wrap = useRef<HTMLDivElement>(null);
+  const [onScreen, setOnScreen] = useState(true);
+
+  // Stop rendering while scrolled out of view; the hero canvas otherwise runs at 60fps
+  // through the whole landing page.
+  useEffect(() => {
+    const el = wrap.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([e]) => setOnScreen(e.isIntersecting), {
+      rootMargin: '100px 0px',
+    });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
   return (
-    <div className={className}>
+    // Decorative: the doctor's state is also shown in text wherever it matters.
+    <div ref={wrap} aria-hidden className={className}>
       <Canvas
-        shadows
-        dpr={[1, 2]}
+        frameloop={onScreen ? 'always' : 'never'}
+        shadows={framing === 'hero'}
+        dpr={[1, 1.75]}
         gl={{ alpha: true, antialias: true, toneMapping: THREE.ACESFilmicToneMapping }}
         camera={{ position: [0, 1.2, 3.7], fov: 28 }}
         eventPrefix="client"
@@ -564,7 +588,7 @@ export default function AvatarStage({
         </Environment>
         <ModelBoundary>
           <Suspense fallback={null}>
-            <Doctor drive={drive} onPoke={onPoke} framing={framing} />
+            <Doctor drive={drive} onPoke={onPoke} framing={framing} still={reduce} />
           </Suspense>
         </ModelBoundary>
       </Canvas>

@@ -3,9 +3,11 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ArrowRight, MessageCircle, Phone, Siren, Video } from 'lucide-react';
+import { ArrowLeft, ArrowRight, MessageCircle, Phone, Video } from 'lucide-react';
 import { motion } from 'motion/react';
-import { AnimatedText, EASE_OUT, PageSkeleton } from '@/components/saathi/motion';
+import { buttonClass } from '@/components/saathi/button';
+import { EmergencyAlert } from '@/components/saathi/emergency';
+import { AnimatedText, PageSkeleton, rise } from '@/components/saathi/motion';
 import { AppHeader } from '@/components/saathi/ui';
 import { Wordmark } from '@/components/saathi/wordmark';
 import { buildBrief, firstName, waCallLink, waChatLink } from '@/lib/brief';
@@ -16,14 +18,6 @@ import { TokenCard } from './token-card';
 // Long notes make a QR code too dense for some phone cameras; past this, the code carries the
 // token only and the patient pastes the rest.
 const QR_MAX_LENGTH = 900;
-
-function rise(delay = 0) {
-  return {
-    initial: { opacity: 0, y: 24 },
-    animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.7, ease: EASE_OUT, delay },
-  };
-}
 
 export function Handoff({
   whatsappNumber,
@@ -62,14 +56,20 @@ export function Handoff({
             text="doctor.ai needs to know who the consult is for and what’s wrong before you call."
             className="mt-4 leading-relaxed text-gray-600"
           />
-          <motion.div {...rise(0.7)}>
-            <Link
-              href="/dashboard"
-              className="bg-brand mt-8 inline-flex items-center gap-2 rounded-lg px-6 py-3.5 font-medium text-white"
-            >
-              Go to my dashboard <ArrowRight className="size-4" />
+          <motion.div
+            {...rise(0.7)}
+            className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row"
+          >
+            <Link href="/dashboard" className={buttonClass()}>
+              Add my notes <ArrowRight className="size-4" />
             </Link>
+            {videoReady && (
+              <Link href="/consult/video" className={buttonClass({ variant: 'outline' })}>
+                <Video className="size-4" /> Talk on video now
+              </Link>
+            )}
           </motion.div>
+          <p className="mt-4 text-sm text-gray-500">Notes take about two minutes.</p>
         </div>
       </Frame>
     );
@@ -89,17 +89,11 @@ export function Handoff({
     <Frame>
       <div className="mx-auto max-w-6xl px-6 py-10 md:px-12 md:py-14">
         {emergency && (
-          <motion.div
-            {...rise(0)}
-            role="alert"
-            className="bg-danger mb-8 flex gap-4 rounded-2xl p-5 text-white"
-          >
-            <Siren className="mt-0.5 size-6 shrink-0" />
-            <p className="leading-relaxed">
-              <strong className="font-semibold">You marked an emergency sign.</strong> Call your
-              local emergency number or go to the nearest emergency department now. doctor.ai can’t
-              treat an emergency over a call.
-            </p>
+          <motion.div {...rise(0)} className="mb-8">
+            <EmergencyAlert
+              flags={intake.redFlags}
+              who={profile.relation === 'self' ? undefined : firstName(profile.name)}
+            />
           </motion.div>
         )}
 
@@ -114,6 +108,10 @@ export function Handoff({
               }
               className="font-display tracking-display text-4xl leading-[1.05] text-gray-900 md:text-6xl"
             />
+            {/* On phones the token card comes right after the heading; it's what to keep handy. */}
+            <motion.div {...rise(0.2)} className="mt-6 lg:hidden">
+              <TokenCard profile={profile} intake={intake} />
+            </motion.div>
 
             {whatsappNumber ? (
               <>
@@ -136,7 +134,7 @@ export function Handoff({
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={() => actions.logConsult(profile.id, 'whatsapp-chat')}
-                      className="border-wa-ink/70 text-wa-ink hover:bg-wa/10 inline-flex items-center gap-2 rounded-lg border px-5 py-3 font-medium transition-colors"
+                      className={buttonClass({ variant: 'wa-outline' })}
                     >
                       <MessageCircle className="size-4" /> Open chat with notes
                     </a>
@@ -150,7 +148,7 @@ export function Handoff({
                     <a
                       href={callHref!}
                       onClick={() => actions.logConsult(profile.id, 'whatsapp-call')}
-                      className="bg-wa inline-flex items-center gap-2 rounded-lg px-6 py-3.5 font-semibold text-[#06301a] transition-transform hover:-translate-y-0.5"
+                      className={buttonClass({ variant: emergency ? 'wa-outline' : 'wa' })}
                     >
                       <Phone className="size-4 fill-current" /> Call doctor.ai on WhatsApp
                     </a>
@@ -221,7 +219,7 @@ export function Handoff({
               {videoReady ? (
                 <Link
                   href="/consult/video"
-                  className="group inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-white px-5 py-3 font-medium text-gray-900 transition-transform hover:-translate-y-0.5"
+                  className={buttonClass({ variant: 'inverse' }, 'shrink-0')}
                 >
                   Start video consult
                   <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
@@ -249,7 +247,9 @@ export function Handoff({
           </div>
 
           <motion.div {...rise(0.3)} className="lg:sticky lg:top-24">
-            <TokenCard profile={profile} intake={intake} />
+            <div className="hidden lg:block">
+              <TokenCard profile={profile} intake={intake} />
+            </div>
             <details className="group mt-4 rounded-xl border border-gray-200 bg-white px-5 py-4">
               <summary className="cursor-pointer list-none text-sm font-medium text-gray-900">
                 <span className="mr-2 inline-block transition-transform group-open:rotate-90">
@@ -270,7 +270,7 @@ export function Handoff({
 
 function Frame({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-svh bg-gradient-to-b from-white to-[#f3f5f4]">
+    <div className="to-mist min-h-svh bg-gradient-to-b from-white">
       <AppHeader>
         <Wordmark />
         <Link
