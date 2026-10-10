@@ -67,7 +67,7 @@ export function Statement() {
         <AnimatedText
           as="h2"
           inView
-          text="Your first call when something feels wrong"
+          text="Your first call when something feels wrong."
           className="font-display tracking-display text-3xl leading-[1.05] md:text-5xl lg:text-6xl"
         />
         <div className="flex md:justify-end md:self-end">
@@ -184,13 +184,13 @@ function StepsStory() {
   return (
     <>
       {/* Phones and reduced motion */}
-      <div className={cn('mx-auto max-w-7xl py-16', PAD, reduce ? 'block' : 'md:hidden')}>
+      <div className={cn('mx-auto max-w-7xl py-16', PAD, reduce ? 'block' : 'md:tall:hidden')}>
         {list}
       </div>
 
       {/* Desktop scroll story */}
       {!reduce && (
-        <div ref={ref} className="relative hidden h-[300vh] md:block">
+        <div ref={ref} className="md:tall:block relative hidden h-[300vh]">
           <div className="sticky top-0 flex h-svh items-center">
             <div className={cn('mx-auto grid w-full max-w-7xl grid-cols-[1fr_1.05fr] gap-16', PAD)}>
               <div className="relative flex flex-col justify-center gap-2 pl-10">
@@ -578,7 +578,7 @@ export function Faq() {
         <AnimatedText
           as="h2"
           inView
-          text="Questions people ask first"
+          text="Questions people ask first."
           className="font-display tracking-display text-3xl leading-[1.05] text-gray-900 md:text-5xl"
         />
         <div className="divide-y divide-gray-200 border-y border-gray-200">

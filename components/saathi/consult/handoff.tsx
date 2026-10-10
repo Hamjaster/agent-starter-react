@@ -108,6 +108,10 @@ export function Handoff({
               }
               className="font-display tracking-display text-4xl leading-[1.05] text-gray-900 md:text-6xl"
             />
+            {/* On phones the token card comes right after the heading; it's what to keep handy. */}
+            <motion.div {...rise(0.2)} className="mt-6 lg:hidden">
+              <TokenCard profile={profile} intake={intake} />
+            </motion.div>
 
             {whatsappNumber ? (
               <>
@@ -243,7 +247,9 @@ export function Handoff({
           </div>
 
           <motion.div {...rise(0.3)} className="lg:sticky lg:top-24">
-            <TokenCard profile={profile} intake={intake} />
+            <div className="hidden lg:block">
+              <TokenCard profile={profile} intake={intake} />
+            </div>
             <details className="group mt-4 rounded-xl border border-gray-200 bg-white px-5 py-4">
               <summary className="cursor-pointer list-none text-sm font-medium text-gray-900">
                 <span className="mr-2 inline-block transition-transform group-open:rotate-90">

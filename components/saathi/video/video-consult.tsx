@@ -393,7 +393,7 @@ function Live({
         </p>
       </header>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-3 px-3 pb-3 sm:px-4 sm:pb-4 lg:grid lg:grid-cols-[1fr_400px] lg:gap-4 lg:px-5 lg:pb-5">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 px-3 pb-3 sm:px-4 sm:pb-4 lg:grid lg:grid-cols-[1fr_400px] lg:gap-4 lg:px-5 lg:pb-5 max-lg:landscape:grid max-lg:landscape:grid-cols-[1fr_minmax(0,320px)]">
         {/* What doctor.ai sees */}
         <motion.section
           aria-label="Your camera"
@@ -516,7 +516,7 @@ function Live({
           transition={{ duration: 0.7, ease: EASE_OUT, delay: 0.15 }}
           className={cn(
             glass,
-            'flex max-h-[44svh] min-h-0 flex-col overflow-hidden rounded-[28px] lg:max-h-none'
+            'flex max-h-[44svh] min-h-0 flex-col overflow-hidden rounded-[28px] lg:max-h-none max-lg:landscape:max-h-none'
           )}
         >
           <Presence />

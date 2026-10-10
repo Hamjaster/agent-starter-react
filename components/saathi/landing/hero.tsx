@@ -105,7 +105,7 @@ export function Hero() {
             initial={reduce ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8, delay: 1.7 }}
-            className="mt-6 max-w-md text-xs leading-relaxed text-gray-500"
+            className="mt-6 max-w-md text-xs leading-relaxed text-gray-600"
           >
             doctor.ai is an AI, not a replacement for your doctor. In an emergency, call your local
             emergency number.
@@ -115,7 +115,7 @@ export function Hero() {
         {/* The doctor: dominates the right of the hero, cropped at the chest like a close-up. */}
         <motion.div
           style={reduce ? undefined : { y: avatarY }}
-          className="relative order-1 -mx-6 h-[64svh] min-h-[440px] md:mx-0 lg:absolute lg:inset-y-0 lg:right-[-3vw] lg:order-none lg:h-auto lg:min-h-0 lg:w-[60vw]"
+          className="relative order-1 -mx-6 h-[46svh] max-h-[520px] min-h-[300px] md:mx-0 md:h-[60svh] lg:absolute lg:inset-y-0 lg:right-[-3vw] lg:order-none lg:h-auto lg:min-h-0 lg:w-[60vw]"
         >
           <AvatarStage
             drive={drive}

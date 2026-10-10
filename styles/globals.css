@@ -1,5 +1,8 @@
 @import 'tailwindcss';
 
+/* Screens tall enough for pinned scroll stories (not landscape phones or short laptops). */
+@custom-variant tall (@media (min-height: 700px));
+
 /*
  * doctor.ai design tokens, after the Vitara healthcare system:
  *   brand  – #2B3534, the one dark surface and primary action colour
