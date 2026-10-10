@@ -3,20 +3,25 @@
 /*
  * doctor.ai design tokens, after the Vitara healthcare system:
  *   brand  – #2B3534, the one dark surface and primary action colour
- *   mist   – the quiet light surface behind the hero
+ *   brand-ink – the darker slate inside dark panels (camera stage)
+ *   mist   – the quiet light surface behind the hero; mist-2 is its deeper end
  *   gray-* – Tailwind's default grays for text and borders
  *   wa     – WhatsApp green, only ever on WhatsApp actions
- *   danger – emergency warnings only
+ *   danger – emergency warnings, plus the two irreversible actions: ending a call and deleting
+ *            a profile. danger-on-dark is the same warning on brand surfaces.
  */
 :root {
   --brand: #2b3534;
   --brand-2: #3a4746;
   --brand-3: #4d5c5a;
+  --brand-ink: #1c2322;
   --mist: #eef1f0;
+  --mist-2: #e6ebe9;
   --wa: #25d366;
   --wa-ink: #0e6b3a;
   --danger: #c2412d;
   --danger-soft: #fbe9e5;
+  --danger-on-dark: #ff7b66;
 }
 
 @theme inline {
@@ -26,11 +31,14 @@
   --color-brand: var(--brand);
   --color-brand-2: var(--brand-2);
   --color-brand-3: var(--brand-3);
+  --color-brand-ink: var(--brand-ink);
   --color-mist: var(--mist);
+  --color-mist-2: var(--mist-2);
   --color-wa: var(--wa);
   --color-wa-ink: var(--wa-ink);
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
+  --color-danger-on-dark: var(--danger-on-dark);
 
   --tracking-display: -0.07em;
   --tracking-display-sm: -0.04em;
@@ -146,6 +154,12 @@
   :focus-visible {
     outline: 2px solid var(--brand-3);
     outline-offset: 3px;
+  }
+  /* brand-3 disappears on the dark surfaces; use white there. */
+  .bg-brand :focus-visible,
+  .bg-brand-ink :focus-visible,
+  [data-surface='dark'] :focus-visible {
+    outline-color: #fff;
   }
 }
 

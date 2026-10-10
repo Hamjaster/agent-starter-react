@@ -4,7 +4,6 @@ import { useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   ArrowRight,
-  ArrowUpRight,
   CalendarCheck,
   Eye,
   FileText,
@@ -25,6 +24,7 @@ import {
   useSpring,
   useTransform,
 } from 'motion/react';
+import { buttonClass } from '@/components/saathi/button';
 import {
   AmbientBg,
   AnimatedText,
@@ -33,6 +33,7 @@ import {
   Reveal,
   TiltCard,
   VelocityMarquee,
+  Viewfinder,
 } from '@/components/saathi/motion';
 import { Wordmark } from '@/components/saathi/wordmark';
 import { RED_FLAGS } from '@/lib/brief';
@@ -301,11 +302,11 @@ function StepScreen({ step }: { step: number }) {
             <span className="block text-sm font-medium text-gray-900">doctor.ai</span>
             <span className="block text-xs text-gray-500">AI doctor</span>
           </span>
-          <span className="relative grid size-10 place-items-center rounded-full bg-[#25d366] text-white">
+          <span className="bg-wa relative grid size-10 place-items-center rounded-full text-white">
             <motion.span
               animate={{ scale: [1, 1.8], opacity: [0.7, 0] }}
               transition={{ duration: 1.2, repeat: Infinity, ease: 'easeOut' }}
-              className="absolute inset-0 rounded-full border-2 border-[#25d366]"
+              className="border-wa absolute inset-0 rounded-full border-2"
             />
             <Phone className="size-4 fill-current" />
           </span>
@@ -394,7 +395,7 @@ export function ShowOnVideo() {
 
         <div className="mt-14 grid gap-4 md:grid-cols-3 md:grid-rows-3">
           <Reveal className="bg-brand relative overflow-hidden rounded-2xl p-7 text-white md:row-span-3">
-            <Viewfinder />
+            <Viewfinder className="inset-6" />
             <div className="relative flex h-full min-h-[280px] flex-col justify-end">
               <h3 className="font-display tracking-display-sm text-3xl md:text-4xl">
                 Hold it up to the camera.
@@ -404,9 +405,9 @@ export function ShowOnVideo() {
               </p>
               <Link
                 href="/dashboard"
-                className="group mt-6 inline-flex w-fit items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-gray-900"
+                className={buttonClass({ variant: 'inverse', size: 'sm' }, 'mt-6 w-fit')}
               >
-                Start from your dashboard
+                Start a consult
                 <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
               </Link>
             </div>
@@ -433,24 +434,6 @@ export function ShowOnVideo() {
         </div>
       </div>
     </section>
-  );
-}
-
-function Viewfinder() {
-  const reduce = useReducedMotion();
-  const c = 'absolute size-9 border-white/50';
-  return (
-    <div aria-hidden className="pointer-events-none absolute inset-6">
-      <span className={cn(c, 'top-0 left-0 rounded-tl-xl border-t-2 border-l-2')} />
-      <span className={cn(c, 'top-0 right-0 rounded-tr-xl border-t-2 border-r-2')} />
-      <span className={cn(c, 'bottom-0 left-0 rounded-bl-xl border-b-2 border-l-2')} />
-      <span className={cn(c, 'right-0 bottom-0 rounded-br-xl border-r-2 border-b-2')} />
-      {!reduce && (
-        <div className="absolute inset-x-3 top-0 h-[55%]">
-          <div className="animate-scan h-px w-full bg-gradient-to-r from-transparent via-white/70 to-transparent shadow-[0_0_24px_4px_rgb(255_255_255/0.25)]" />
-        </div>
-      )}
-    </div>
   );
 }
 
@@ -491,8 +474,8 @@ export function Safety() {
                   className="flex items-center gap-3 py-3.5"
                 >
                   <span className="relative flex size-2 shrink-0">
-                    <span className="absolute inline-flex size-full animate-ping rounded-full bg-[#ff7b66] opacity-40" />
-                    <span className="relative inline-flex size-2 rounded-full bg-[#ff7b66]" />
+                    <span className="bg-danger-on-dark absolute inline-flex size-full animate-ping rounded-full opacity-40" />
+                    <span className="bg-danger-on-dark relative inline-flex size-2 rounded-full" />
                   </span>
                   {f}
                 </motion.li>
@@ -670,19 +653,13 @@ export function Closing() {
           />
           <Reveal delay={0.5} className="mt-10 flex flex-wrap gap-3">
             <Magnetic>
-              <Link
-                href="/dashboard"
-                className="group inline-flex items-center gap-2 rounded-lg bg-white px-6 py-3.5 font-medium text-gray-900"
-              >
-                Set up my health profile
+              <Link href="/dashboard" className={buttonClass({ variant: 'inverse' })}>
+                Start a consult
                 <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
               </Link>
             </Magnetic>
-            <Link
-              href="/consult"
-              className="inline-flex items-center gap-2 rounded-lg border border-white/20 px-6 py-3.5 font-medium text-white transition-colors hover:bg-white/10"
-            >
-              Call on WhatsApp <ArrowUpRight className="size-4" />
+            <Link href="/consult" className={buttonClass({ variant: 'outline-dark' })}>
+              Call on WhatsApp <ArrowRight className="size-4" />
             </Link>
           </Reveal>
           <div className="mt-24 flex flex-col gap-6 border-t border-white/10 pt-8 text-sm text-gray-400 md:flex-row md:items-end md:justify-between">

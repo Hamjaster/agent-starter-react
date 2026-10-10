@@ -18,7 +18,7 @@ const EXAMPLES = [
 ];
 
 const SUGGESTIONS = [
-  { href: '/dashboard', label: 'Start symptom check', icon: Zap },
+  { href: '/dashboard', label: 'Start a consult', icon: Zap },
   { href: '/consult', label: 'Call on WhatsApp', icon: Phone },
   { href: '/consult/video', label: 'Video consult', icon: Stethoscope },
 ];

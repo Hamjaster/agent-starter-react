@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, ArrowRight, Check, Pencil } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { buttonClass } from '@/components/saathi/button';
 import { EmergencyAlert } from '@/components/saathi/emergency';
 import { EASE_OUT } from '@/components/saathi/motion';
 import { BODY_AREAS, RED_FLAGS, SINCE_LABELS, firstName } from '@/lib/brief';
@@ -274,10 +275,8 @@ export function IntakeFlow({
                         className={cn(
                           'h-14 rounded-xl border text-lg tabular-nums transition-colors',
                           on
-                            ? n >= 8
-                              ? 'border-danger bg-danger text-white'
-                              : 'border-brand bg-brand text-white'
-                            : 'border-gray-200 bg-white text-gray-500 hover:border-gray-400'
+                            ? 'border-brand bg-brand text-white'
+                            : 'border-gray-200 bg-white text-gray-600 hover:border-gray-400'
                         )}
                         style={on ? { transitionDelay: `${(n - 1) * 25}ms` } : undefined}
                       >
@@ -331,19 +330,11 @@ export function IntakeFlow({
           <>
             <span />
             {emergency ? (
-              <button
-                type="button"
-                onClick={next}
-                className="rounded-xl border border-gray-200 px-5 py-3.5 font-medium text-gray-900 transition-colors hover:border-gray-400"
-              >
+              <button type="button" onClick={next} className={buttonClass({ variant: 'outline' })}>
                 I’m safe, continue to doctor.ai
               </button>
             ) : (
-              <button
-                type="button"
-                onClick={next}
-                className="bg-brand hover:bg-brand-2 inline-flex items-center gap-2 rounded-xl px-6 py-3.5 font-medium text-white transition-[transform,background-color] hover:-translate-y-0.5"
-              >
+              <button type="button" onClick={next} className={buttonClass()}>
                 None of these <ArrowRight className="size-4" />
               </button>
             )}
@@ -358,13 +349,7 @@ export function IntakeFlow({
               aria-disabled={!ready}
               tabIndex={ready ? undefined : -1}
               onClick={(e) => !ready && e.preventDefault()}
-              className={cn(
-                'group inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3.5 font-medium transition-[transform,background-color,opacity]',
-                !ready && 'pointer-events-none opacity-40',
-                emergency
-                  ? 'border border-gray-200 bg-white text-gray-900'
-                  : 'bg-brand hover:bg-brand-2 text-white hover:-translate-y-0.5'
-              )}
+              className={buttonClass({ variant: emergency ? 'outline' : 'primary' })}
             >
               {emergency ? 'Continue to doctor.ai anyway' : 'Continue to consult'}
               <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
@@ -383,12 +368,7 @@ export function IntakeFlow({
                 Skip
               </button>
             )}
-            <button
-              type="button"
-              disabled={!canContinue}
-              onClick={next}
-              className="bg-brand hover:bg-brand-2 inline-flex items-center gap-2 rounded-xl px-6 py-3.5 font-medium text-white transition-[transform,background-color,opacity] enabled:hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-30"
-            >
+            <button type="button" disabled={!canContinue} onClick={next} className={buttonClass()}>
               Continue <ArrowRight className="size-4" />
             </button>
           </>

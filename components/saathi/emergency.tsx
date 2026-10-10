@@ -2,6 +2,7 @@
 
 import { forwardRef } from 'react';
 import { HeartHandshake, Phone, Siren } from 'lucide-react';
+import { buttonClass } from '@/components/saathi/button';
 import { CRISIS_LINE, EMERGENCY_LINE, SELF_HARM_FLAG } from '@/lib/brief';
 import { cn } from '@/lib/cn';
 
@@ -41,14 +42,14 @@ export const EmergencyAlert = forwardRef<
           <div className="mt-4 flex flex-wrap gap-2">
             <a
               href={`tel:${EMERGENCY_LINE.tel}`}
-              className="text-danger inline-flex min-h-11 items-center gap-2 rounded-xl bg-white px-5 font-semibold transition-transform hover:-translate-y-0.5"
+              className={buttonClass({ variant: 'inverse' }, 'text-danger font-semibold')}
             >
               <Phone aria-hidden className="size-4 fill-current" /> Call {EMERGENCY_LINE.tel}
             </a>
             {selfHarm && (
               <a
                 href={`tel:${CRISIS_LINE.tel}`}
-                className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/60 px-5 font-medium text-white transition-colors hover:bg-white/10"
+                className={buttonClass({ variant: 'outline-dark' }, 'border-white/60')}
               >
                 Call {CRISIS_LINE.name}
               </a>

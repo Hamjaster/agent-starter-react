@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
+import { buttonClass } from '@/components/saathi/button';
 import { Magnetic } from '@/components/saathi/motion';
 import { Wordmark } from '@/components/saathi/wordmark';
 import { cn } from '@/lib/cn';
@@ -58,10 +59,7 @@ export function SiteNav() {
             Dashboard
           </Link>
           <Magnetic>
-            <Link
-              href="/dashboard"
-              className="rounded-lg bg-gray-800 px-4 py-2 text-sm font-medium text-white transition-[background-color,transform] hover:-translate-y-0.5 hover:bg-gray-900"
-            >
+            <Link href="/dashboard" className={buttonClass({ size: 'sm' })}>
               Start a consult
             </Link>
           </Magnetic>
@@ -96,10 +94,7 @@ export function SiteNav() {
                   {l.label}
                 </a>
               ))}
-              <Link
-                href="/dashboard"
-                className="mt-2 rounded-lg bg-gray-800 px-4 py-3 text-center font-medium text-white"
-              >
+              <Link href="/dashboard" className={buttonClass({}, 'mt-2 w-full')}>
                 Start a consult
               </Link>
             </div>

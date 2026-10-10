@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Pencil, Plus, Trash2, Video } from 'lucide-react';
 import { motion } from 'motion/react';
-import { EASE_OUT, PageSkeleton } from '@/components/saathi/motion';
+import { EASE_OUT, PageSkeleton, rise } from '@/components/saathi/motion';
 import { AppHeader } from '@/components/saathi/ui';
 import { Wordmark } from '@/components/saathi/wordmark';
 import { RELATION_LABELS, firstName } from '@/lib/brief';
@@ -22,14 +22,6 @@ import { Onboarding } from './onboarding';
 import { ProfileForm } from './profile-form';
 
 const card = 'rounded-2xl border border-gray-200 bg-white';
-
-function rise(delay = 0) {
-  return {
-    initial: { opacity: 0, y: 24 },
-    animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.7, ease: EASE_OUT, delay },
-  };
-}
 
 export function Dashboard() {
   const hydrated = useHydrated();
@@ -104,7 +96,7 @@ export function Dashboard() {
 
 function Shell({ children, switcher }: { children: React.ReactNode; switcher?: React.ReactNode }) {
   return (
-    <div className="min-h-svh bg-gradient-to-b from-white to-[#f3f5f4]">
+    <div className="to-mist min-h-svh bg-gradient-to-b from-white">
       <AppHeader>
         <Wordmark />
         {switcher}

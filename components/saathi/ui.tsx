@@ -1,6 +1,7 @@
 'use client';
 
 import { useId } from 'react';
+import { type ButtonSize, type ButtonVariant, buttonClass } from '@/components/saathi/button';
 import { cn } from '@/lib/cn';
 
 export function Field({
@@ -70,51 +71,13 @@ export function Segmented<T extends string | number>({
   );
 }
 
-export function Chip({
-  on,
-  onClick,
-  children,
-}: {
-  on: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={on}
-      onClick={onClick}
-      className={cn(
-        'rounded-full border px-3.5 py-1.5 text-sm transition-[background-color,border-color,color,transform] active:scale-95',
-        on
-          ? 'border-brand bg-brand text-white'
-          : 'border-gray-200 bg-white text-gray-600 hover:border-gray-400 hover:text-gray-900'
-      )}
-    >
-      {children}
-    </button>
-  );
-}
-
 export function Button({
   variant = 'primary',
+  size = 'md',
   className,
   ...props
-}: React.ComponentProps<'button'> & { variant?: 'primary' | 'quiet' | 'ghost' }) {
-  return (
-    <button
-      {...props}
-      className={cn(
-        'inline-flex items-center justify-center gap-2 rounded-lg px-5 py-3 font-medium transition-[transform,background-color,opacity] disabled:cursor-not-allowed disabled:opacity-40',
-        variant === 'primary' &&
-          'bg-brand hover:bg-brand-2 text-white enabled:hover:-translate-y-0.5',
-        variant === 'quiet' &&
-          'border border-gray-200 bg-white text-gray-900 hover:border-gray-400',
-        variant === 'ghost' && 'text-gray-500 hover:text-gray-900',
-        className
-      )}
-    />
-  );
+}: React.ComponentProps<'button'> & { variant?: ButtonVariant; size?: ButtonSize }) {
+  return <button {...props} className={buttonClass({ variant, size }, className)} />;
 }
 
 /** Page header for the app screens (dashboard, consult, video). */

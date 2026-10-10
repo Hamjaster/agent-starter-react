@@ -70,7 +70,7 @@ export function Hero() {
   return (
     <section
       ref={section}
-      className="relative isolate overflow-hidden bg-gradient-to-b from-white via-white to-[#e6ebe9]"
+      className="to-mist-2 relative isolate overflow-hidden bg-gradient-to-b from-white via-white"
     >
       {/* Soft halo behind the doctor */}
       <div

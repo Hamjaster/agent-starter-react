@@ -29,7 +29,14 @@ import {
   useTrackToggle,
   useTrackVolume,
 } from '@livekit/components-react';
-import { AmbientBg, AnimatedText, EASE_OUT, PageSkeleton } from '@/components/saathi/motion';
+import { buttonClass } from '@/components/saathi/button';
+import {
+  AmbientBg,
+  AnimatedText,
+  EASE_OUT,
+  PageSkeleton,
+  Viewfinder,
+} from '@/components/saathi/motion';
 import type { AvatarDrive, AvatarMood } from '@/components/saathi/three/types';
 import { Wordmark } from '@/components/saathi/wordmark';
 import { buildBrief, firstName } from '@/lib/brief';
@@ -185,7 +192,7 @@ function Lobby({
 }) {
   const drive = useRef<AvatarDrive>({ level: 0, mood: 'idle', synthetic: true });
   return (
-    <div className="min-h-svh bg-gradient-to-b from-white to-[#e6ebe9]">
+    <div className="to-mist-2 min-h-svh bg-gradient-to-b from-white">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5 md:px-12">
         <Wordmark />
         <Link
@@ -225,7 +232,7 @@ function Lobby({
           {error && (
             <p
               role="alert"
-              className="bg-danger mt-8 rounded-xl px-5 py-4 text-sm leading-relaxed text-white"
+              className="mt-8 rounded-xl border border-gray-300 bg-white px-5 py-4 text-sm leading-relaxed text-gray-900"
             >
               {error}
             </p>
@@ -237,7 +244,7 @@ function Lobby({
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: EASE_OUT, delay: 0.9 }}
-            className="bg-brand hover:bg-brand-2 mt-10 inline-flex w-full items-center justify-center gap-2 rounded-lg px-6 py-4 text-lg font-medium text-white transition-colors disabled:opacity-70 sm:w-auto"
+            className={buttonClass({ size: 'lg' }, 'mt-10 w-full sm:w-auto')}
           >
             <Camera className="size-5" />
             {starting ? 'Connecting…' : 'Start video consult'}
@@ -327,7 +334,7 @@ function Live({ profile, intake, onEnd }: { profile: Profile; intake: Intake; on
           initial={{ opacity: 0, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.7, ease: EASE_OUT }}
-          className="relative min-h-0 flex-1 overflow-hidden rounded-[28px] bg-[#1c2322] shadow-[0_40px_80px_-40px_rgb(0_0_0/0.7)] ring-1 ring-white/10"
+          className="bg-brand-ink relative min-h-0 flex-1 overflow-hidden rounded-[28px] shadow-[0_40px_80px_-40px_rgb(0_0_0/0.7)] ring-1 ring-white/10"
         >
           {cameraOn && cameraRef ? (
             <VideoTrack
@@ -355,7 +362,10 @@ function Live({ profile, intake, onEnd }: { profile: Profile; intake: Intake; on
                   type="button"
                   onClick={() => cam.toggle()}
                   disabled={cam.pending}
-                  className="mt-6 hidden items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-medium text-gray-900 transition-transform hover:-translate-y-0.5 disabled:opacity-60 sm:inline-flex"
+                  className={buttonClass(
+                    { variant: 'inverse', size: 'sm' },
+                    'mt-6 hidden sm:inline-flex'
+                  )}
                 >
                   <Camera className="size-4" /> Turn camera on
                 </button>
@@ -372,7 +382,10 @@ function Live({ profile, intake, onEnd }: { profile: Profile; intake: Intake; on
             aria-hidden
             className="pointer-events-none absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-black/65 to-transparent"
           />
-          <Viewfinder scanning={cameraOn} />
+          <Viewfinder
+            scanning={cameraOn}
+            className="inset-x-6 top-16 bottom-6 sm:inset-x-10 sm:bottom-10"
+          />
 
           <p
             className={cn(
@@ -380,7 +393,7 @@ function Live({ profile, intake, onEnd }: { profile: Profile; intake: Intake; on
               'absolute top-4 left-4 inline-flex items-center gap-2 rounded-full bg-black/30 px-3 py-1.5 text-xs font-medium'
             )}
           >
-            <span className="bg-wa size-1.5 rounded-full" />
+            <span className="size-1.5 rounded-full bg-white" />
             What doctor.ai sees
             {facing === 'environment' && <span className="text-white/55">· Back camera</span>}
           </p>
@@ -472,8 +485,8 @@ function LiveBadge() {
       )}
     >
       <span className="relative flex size-2">
-        <span className="bg-danger absolute inset-0 animate-ping rounded-full opacity-60" />
-        <span className="bg-danger relative size-2 rounded-full" />
+        <span className="absolute inset-0 animate-ping rounded-full bg-white opacity-50" />
+        <span className="relative size-2 rounded-full bg-white" />
       </span>
       Live <span className="text-white/55">{clock}</span>
     </span>
@@ -520,28 +533,6 @@ function ControlButton({
       )}
       {children}
     </motion.button>
-  );
-}
-
-/** Corner brackets: the frame is the exam light, not decoration. */
-function Viewfinder({ scanning }: { scanning: boolean }) {
-  const reduce = useReducedMotion();
-  const corner = 'absolute size-10 border-white/60';
-  return (
-    <div
-      aria-hidden
-      className="pointer-events-none absolute inset-x-6 top-16 bottom-6 sm:inset-x-10 sm:top-16 sm:bottom-10"
-    >
-      <span className={cn(corner, 'top-0 left-0 rounded-tl-2xl border-t-2 border-l-2')} />
-      <span className={cn(corner, 'top-0 right-0 rounded-tr-2xl border-t-2 border-r-2')} />
-      <span className={cn(corner, 'bottom-0 left-0 rounded-bl-2xl border-b-2 border-l-2')} />
-      <span className={cn(corner, 'right-0 bottom-0 rounded-br-2xl border-r-2 border-b-2')} />
-      {scanning && !reduce && (
-        <div className="absolute inset-x-3 top-0 h-[60%] opacity-60">
-          <div className="animate-scan h-px w-full bg-gradient-to-r from-transparent via-white/70 to-transparent shadow-[0_0_24px_4px_rgb(255_255_255/0.2)]" />
-        </div>
-      )}
-    </div>
   );
 }
 
@@ -681,8 +672,8 @@ function StateGlyph({ state, level }: { state: string; level: number }) {
   if (state === 'listening') {
     return (
       <span aria-hidden className="relative flex size-2">
-        <span className="bg-wa absolute inset-0 animate-ping rounded-full opacity-50" />
-        <span className="bg-wa relative size-2 rounded-full" />
+        <span className="absolute inset-0 animate-ping rounded-full bg-white opacity-40" />
+        <span className="relative size-2 rounded-full bg-white" />
       </span>
     );
   }
@@ -849,7 +840,7 @@ function Transcript({
 function Ended({ profile, intake }: { profile: Profile; intake: Intake }) {
   const router = useRouter();
   return (
-    <div className="grid min-h-svh place-items-center bg-gradient-to-b from-white to-[#eef1f0] px-6 py-16">
+    <div className="to-mist grid min-h-svh place-items-center bg-gradient-to-b from-white px-6 py-16">
       <div className="w-full max-w-md text-center">
         <AnimatedText
           as="h1"
@@ -867,7 +858,7 @@ function Ended({ profile, intake }: { profile: Profile; intake: Intake }) {
               actions.closeIntake(profile.id);
               router.push('/dashboard');
             }}
-            className="bg-brand w-full rounded-lg px-6 py-3.5 font-medium text-white sm:w-auto"
+            className={buttonClass({}, 'w-full sm:w-auto')}
           >
             Done, back to my dashboard
           </button>

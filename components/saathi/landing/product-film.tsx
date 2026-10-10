@@ -61,7 +61,7 @@ export function ProductFilm() {
         <div ref={frame} className="mt-14 [perspective:1600px]">
           <motion.div
             style={reduce ? undefined : { scale, borderRadius: radius, rotateX: tilt }}
-            className="origin-top overflow-hidden border border-white/10 bg-[#f2f4f3] shadow-[0_60px_120px_-40px_rgb(0_0_0/0.6)]"
+            className="bg-mist origin-top overflow-hidden border border-white/10 shadow-[0_60px_120px_-40px_rgb(0_0_0/0.6)]"
           >
             <LoopVideo
               name="consult-flow"

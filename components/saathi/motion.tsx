@@ -19,6 +19,43 @@ import { cn } from '@/lib/cn';
 
 const EASE_OUT = [0.22, 1, 0.36, 1] as const;
 
+/** Entrance used by the app screens: fade up 24px, staggered by `delay`. */
+export function rise(delay = 0) {
+  return {
+    initial: { opacity: 0, y: 24 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.7, ease: EASE_OUT, delay },
+  };
+}
+
+/**
+ * Exam-light corner brackets over a dark camera or card surface, with an optional scan line.
+ * Position it with `className` (e.g. `inset-6`).
+ */
+export function Viewfinder({
+  scanning = true,
+  className,
+}: {
+  scanning?: boolean;
+  className?: string;
+}) {
+  const reduce = useReducedMotion();
+  const corner = 'absolute size-10 border-white/60';
+  return (
+    <div aria-hidden className={cn('pointer-events-none absolute', className)}>
+      <span className={cn(corner, 'top-0 left-0 rounded-tl-2xl border-t-2 border-l-2')} />
+      <span className={cn(corner, 'top-0 right-0 rounded-tr-2xl border-t-2 border-r-2')} />
+      <span className={cn(corner, 'bottom-0 left-0 rounded-bl-2xl border-b-2 border-l-2')} />
+      <span className={cn(corner, 'right-0 bottom-0 rounded-br-2xl border-r-2 border-b-2')} />
+      {scanning && !reduce && (
+        <div className="absolute inset-x-3 top-0 h-[60%] opacity-70">
+          <div className="animate-scan h-px w-full bg-gradient-to-r from-transparent via-white/70 to-transparent shadow-[0_0_24px_4px_rgb(255_255_255/0.2)]" />
+        </div>
+      )}
+    </div>
+  );
+}
+
 type TextTag = 'h1' | 'h2' | 'h3' | 'p' | 'span';
 
 /**
