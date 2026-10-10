@@ -430,7 +430,7 @@ function Live({
                   disabled={cam.pending}
                   className={buttonClass(
                     { variant: 'inverse', size: 'sm' },
-                    'mt-6 hidden sm:inline-flex'
+                    'sm:tall:inline-flex mt-6 hidden'
                   )}
                 >
                   <Camera className="size-4" /> Turn camera on
@@ -909,10 +909,10 @@ function Transcript({ patientName, chat }: { patientName: string; chat: SessionC
 
 /* ───────────────────────── Ended ───────────────────────── */
 
-/** Markdown links and bold to plain text, for the recap and the copied notes. */
-function plain(text: string) {
+/** Markdown links and bold to plain text; links keep their URL only where asked (copied notes). */
+function plain(text: string, urls = false) {
   return text
-    .replace(/\[([^\]]+)\]\((https?:[^)]+)\)/g, '$1 ($2)')
+    .replace(/\[([^\]]+)\]\((https?:[^)]+)\)/g, urls ? '$1 ($2)' : '$1')
     .replace(/\*\*(.+?)\*\*/g, '$1')
     .trim();
 }
@@ -940,7 +940,7 @@ function Ended({
     lines.push('');
     for (const m of messages) {
       if (!m.message.trim()) continue;
-      lines.push(`${m.from?.isLocal ? name || 'Me' : 'doctor.ai'}: ${plain(m.message)}`);
+      lines.push(`${m.from?.isLocal ? name || 'Me' : 'doctor.ai'}: ${plain(m.message, true)}`);
     }
     try {
       await navigator.clipboard.writeText(lines.join('\n'));
