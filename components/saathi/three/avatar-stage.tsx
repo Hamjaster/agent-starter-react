@@ -101,72 +101,169 @@ function setMorph(rig: Rig, re: RegExp, v: number) {
 
 const GLOW = '#9ef5e6';
 
-/** Ceramic shell, dark glass face screen, glowing eyes, waveform mouth, ear pods and a halo. */
+// The face screen is an ellipsoid; features sit on its surface.
+const VISOR = { cy: 0.004, cz: 0.06, rx: 0.084, ry: 0.074, rz: 0.062 };
+const _n = new THREE.Vector3();
+function onVisor(x: number, y: number, lift = 0.0015) {
+  const { cy, cz, rx, ry, rz } = VISOR;
+  const u = x / rx;
+  const v = (y - cy) / ry;
+  const w = Math.sqrt(Math.max(0.0001, 1 - u * u - v * v));
+  const pos = new THREE.Vector3(x, y, cz + rz * w);
+  _n.set(u / rx, v / ry, w / rz).normalize();
+  pos.addScaledVector(_n, lift);
+  return { pos, quat: new THREE.Quaternion().setFromUnitVectors(Z_AXIS, _n) };
+}
+
+/** A lip curve: closed it's a single smile line; open, the lips part in the middle. */
+const MOUTH_W = 0.025;
+const MOUTH_Y = -0.032;
+function lipGeometry(smile: number, open: number, upper: boolean) {
+  const pts: THREE.Vector3[] = [];
+  for (let i = 0; i <= 16; i++) {
+    const s = (i / 16) * 2 - 1;
+    const x = s * MOUTH_W * (1 - open * 0.15);
+    const edge = s * s;
+    const mid = 1 - edge;
+    const y = MOUTH_Y + smile * 0.007 * edge + (upper ? open * 0.004 : -open * 0.011) * mid;
+    pts.push(onVisor(x, y, 0.0018).pos);
+  }
+  return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 32, 0.0016, 6, false);
+}
+
+/** Ceramic head with a dark glass face: soft eyes with pupils, brows, a smiling mouth, cheeks and ears. */
 function makeAIHead() {
   const g = new THREE.Group();
   g.name = 'AIHead';
   const shellMat = new THREE.MeshPhysicalMaterial({
-    color: '#f3f5f4',
-    roughness: 0.2,
-    clearcoat: 1,
-    clearcoatRoughness: 0.08,
-    sheen: 0.4,
-    sheenColor: new THREE.Color('#ffffff'),
+    color: '#f6f3ef',
+    roughness: 0.28,
+    clearcoat: 0.8,
+    clearcoatRoughness: 0.15,
+    sheen: 0.6,
+    sheenColor: new THREE.Color('#fff1e6'),
   });
   const glow = new THREE.MeshBasicMaterial({ color: GLOW, toneMapped: false });
 
-  const shell = new THREE.Mesh(new THREE.SphereGeometry(0.115, 64, 48), shellMat);
-  shell.scale.set(0.9, 1.06, 0.98);
+  // Head-shaped shell: a wide cranium tapering to a soft chin.
+  const profile = new THREE.SplineCurve(
+    [
+      [0, -0.122],
+      [0.045, -0.116],
+      [0.074, -0.088],
+      [0.093, -0.038],
+      [0.103, 0.02],
+      [0.103, 0.065],
+      [0.093, 0.105],
+      [0.066, 0.135],
+      [0.03, 0.149],
+      [0.0001, 0.151],
+    ].map(([x, y]) => new THREE.Vector2(x, y))
+  ).getPoints(48);
+  const shell = new THREE.Mesh(new THREE.LatheGeometry(profile, 72), shellMat);
+  shell.scale.set(0.95, 1, 1);
+
   const visor = new THREE.Mesh(
-    new THREE.SphereGeometry(0.1, 64, 48),
+    new THREE.SphereGeometry(1, 64, 48),
     new THREE.MeshPhysicalMaterial({
-      color: '#0c1615',
-      roughness: 0.05,
-      metalness: 0.3,
+      color: '#0f1a19',
+      roughness: 0.08,
+      metalness: 0.2,
       clearcoat: 1,
     })
   );
-  visor.scale.set(0.84, 0.64, 0.62);
-  visor.position.set(0, 0.004, 0.06);
+  visor.scale.set(VISOR.rx, VISOR.ry, VISOR.rz);
+  visor.position.set(0, VISOR.cy, VISOR.cz);
 
+  // Eyes: a glowing iris, a dark pupil and a catchlight, so the gaze reads as a look.
   const eyes = new THREE.Group();
-  eyes.position.set(0, 0.016, 0.119);
+  const pupils: THREE.Group[] = [];
+  const pupilMat = new THREE.MeshBasicMaterial({ color: '#0b1413' });
+  const shine = new THREE.MeshBasicMaterial({ color: '#ffffff', toneMapped: false });
   for (const x of [-0.029, 0.029]) {
-    const e = new THREE.Mesh(new THREE.CapsuleGeometry(0.0085, 0.012, 6, 16), glow);
-    e.position.x = x;
-    eyes.add(e);
+    const { pos, quat } = onVisor(x, 0.018);
+    const eye = new THREE.Group();
+    eye.position.copy(pos);
+    eye.quaternion.copy(quat);
+    const iris = new THREE.Mesh(new THREE.CircleGeometry(0.0125, 40), glow);
+    iris.scale.set(0.92, 1.08, 1);
+    const pupil = new THREE.Group();
+    pupil.position.z = 0.0004;
+    pupil.add(new THREE.Mesh(new THREE.CircleGeometry(0.0058, 32), pupilMat));
+    const glint = new THREE.Mesh(new THREE.CircleGeometry(0.0019, 16), shine);
+    glint.position.set(0.0026, 0.0028, 0.0003);
+    pupil.add(glint);
+    eye.add(iris, pupil);
+    eyes.add(eye);
+    pupils.push(pupil);
   }
-  const mouth = new THREE.Group();
-  mouth.position.set(0, -0.026, 0.117);
-  const bars: THREE.Mesh[] = [];
-  for (let i = 0; i < 7; i++) {
-    const b = new THREE.Mesh(new THREE.BoxGeometry(0.0042, 0.012, 0.002), glow);
-    b.position.x = (i - 3) * 0.0078;
-    mouth.add(b);
-    bars.push(b);
-  }
+
+  // Brows: short glowing arcs that lift and knit with mood.
+  const brows: THREE.Group[] = [];
   for (const sx of [-1, 1]) {
-    const pod = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.022, 40), shellMat);
-    pod.rotation.z = Math.PI / 2;
-    pod.position.set(sx * 0.1, 0, -0.005);
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.022, 0.0024, 8, 48), glow);
-    ring.rotation.y = Math.PI / 2;
-    ring.position.set(sx * 0.112, 0, -0.005);
-    g.add(pod, ring);
+    const pts = [-1, -0.5, 0, 0.5, 1].map((s) => {
+      const x = sx * (0.029 + s * 0.011);
+      return onVisor(x, 0.04 + (1 - s * s) * 0.003 - sx * s * 0.0015, 0.0016).pos;
+    });
+    const brow = new THREE.Group();
+    brow.add(
+      new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 16, 0.0013, 6), glow)
+    );
+    g.add(brow);
+    brows.push(brow);
   }
+
+  // Mouth: two lips rebuilt each frame from smile + openness.
+  const upperLip = new THREE.Mesh(lipGeometry(0.4, 0, true), glow);
+  const lowerLip = new THREE.Mesh(lipGeometry(0.4, 0, false), glow);
+
+  // Cheeks: a faint warm blush that comes up when he smiles.
+  const blush = new THREE.MeshBasicMaterial({
+    color: '#ff9fae',
+    transparent: true,
+    opacity: 0,
+    depthWrite: false,
+    toneMapped: false,
+  });
+  for (const sx of [-1, 1]) {
+    const { pos, quat } = onVisor(sx * 0.05, -0.008, 0.001);
+    const cheek = new THREE.Mesh(new THREE.CircleGeometry(0.011, 32), blush);
+    cheek.position.copy(pos);
+    cheek.quaternion.copy(quat);
+    cheek.scale.set(1.3, 0.75, 1);
+    g.add(cheek);
+  }
+
+  // Ears: rounded shells with a small glowing ring instead of headphone pods.
+  for (const sx of [-1, 1]) {
+    const ear = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 24), shellMat);
+    ear.scale.set(0.012, 0.03, 0.02);
+    ear.position.set(sx * 0.096, 0.006, -0.004);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.009, 0.0016, 8, 32), glow);
+    ring.rotation.y = Math.PI / 2;
+    ring.scale.set(1, 1.6, 1);
+    ring.position.set(sx * 0.1075, 0.006, -0.004);
+    g.add(ear, ring);
+  }
+
   const halo = new THREE.Mesh(
-    new THREE.TorusGeometry(0.155, 0.0016, 8, 120),
-    new THREE.MeshBasicMaterial({ color: GLOW, transparent: true, opacity: 0.5, toneMapped: false })
+    new THREE.TorusGeometry(0.16, 0.0012, 8, 120),
+    new THREE.MeshBasicMaterial({
+      color: GLOW,
+      transparent: true,
+      opacity: 0.28,
+      toneMapped: false,
+    })
   );
   halo.rotation.x = Math.PI / 2 - 0.22;
-  halo.position.y = 0.035;
+  halo.position.y = 0.05;
   const neck = new THREE.Mesh(
     new THREE.CylinderGeometry(0.04, 0.05, 0.12, 40),
     new THREE.MeshPhysicalMaterial({ color: '#2B3534', roughness: 0.35, clearcoat: 0.6 })
   );
   neck.position.y = -0.135;
-  g.add(shell, visor, eyes, mouth, halo, neck);
-  return { g, eyes, bars, halo, glow };
+  g.add(shell, visor, eyes, upperLip, lowerLip, halo, neck);
+  return { g, eyes, pupils, brows, upperLip, lowerLip, blush, halo, glow };
 }
 
 /** Holographic stethoscope and an "AI" badge, built around the chest in world space. */
@@ -308,6 +405,7 @@ function Doctor({
     level: 0,
     blinkNext: 1.2,
     blinkStart: -1,
+    smile: 0.45,
     look: new THREE.Vector3(),
     spin: 0,
     dragging: false,
@@ -430,15 +528,42 @@ function Doctor({
     {
       const gx0 = mood === 'thinking' ? 0.6 : pointer.x;
       const gy0 = mood === 'thinking' ? 0.6 : pointer.y;
-      ai.eyes.scale.y = Math.max(0.12, 1 - blink) * (1 - S.hover * 0.35);
-      ai.eyes.position.x = damp(ai.eyes.position.x, gx0 * 0.012, 8, dt);
-      ai.eyes.position.y = damp(ai.eyes.position.y, 0.016 + gy0 * 0.008, 8, dt);
-      ai.bars.forEach((b, i) => {
-        const wave = Math.abs(Math.sin(t * 13 + i * 1.2)) * (1 - Math.abs(i - 3) / 4.5);
-        b.scale.y = damp(b.scale.y, 0.35 + L * 3.2 * wave + S.hover * 0.25, 20, dt);
+      // Blink and a happy squint on hover; the pupils do the looking.
+      const squint = S.hover * 0.3 + (up > 0 ? 0.2 : 0);
+      for (const eye of ai.eyes.children) {
+        eye.scale.y = damp(eye.scale.y, Math.max(0.08, 1 - blink) * (1 - squint), 30, dt);
+      }
+      ai.eyes.position.x = damp(ai.eyes.position.x, gx0 * 0.003, 8, dt);
+      for (const p of ai.pupils) {
+        p.position.x = damp(p.position.x, gx0 * 0.0045, 10, dt);
+        p.position.y = damp(p.position.y, gy0 * 0.004, 10, dt);
+      }
+      // Brows: up when listening or delighted, knitted when thinking.
+      const lift =
+        (mood === 'listening' ? 0.003 : 0) + L * 0.002 + S.hover * 0.002 - think * 0.0015;
+      ai.brows.forEach((b, i) => {
+        const sx = i === 0 ? -1 : 1;
+        b.position.y = damp(b.position.y, lift, 8, dt);
+        b.rotation.z = damp(
+          b.rotation.z,
+          sx * think * 0.18 + sx * -(mood === 'listening' ? 0.06 : 0),
+          6,
+          dt
+        );
       });
-      ai.halo.rotation.z += dt * (0.35 + L * 1.5);
-      const k = 1 + L * 0.6 + S.hover * 0.25;
+      // Mouth: a gentle resting smile that widens on hover and parts with speech.
+      S.smile = damp(S.smile, (think ? 0.05 : 0.45) + S.hover * 0.55 + (up > 0 ? 0.4 : 0), 6, dt);
+      const open = L * (0.55 + 0.45 * Math.abs(Math.sin(t * 9.1)));
+      for (const [lip, upper] of [
+        [ai.upperLip, true],
+        [ai.lowerLip, false],
+      ] as const) {
+        lip.geometry.dispose();
+        lip.geometry = lipGeometry(S.smile, open, upper);
+      }
+      ai.blush.opacity = damp(ai.blush.opacity, 0.12 + S.hover * 0.35 + (up > 0 ? 0.2 : 0), 5, dt);
+      ai.halo.rotation.z += dt * (0.25 + L * 1.0);
+      const k = 1 + L * 0.4 + S.hover * 0.2;
       ai.glow.color.set(GLOW).multiplyScalar(k);
       if (gear.current) {
         const beat = (t * 1.2) % 1;
