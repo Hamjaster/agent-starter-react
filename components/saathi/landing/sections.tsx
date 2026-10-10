@@ -404,7 +404,7 @@ export function ShowOnVideo() {
                 doctor.ai looks, asks what it needs to, and tells you what it sees.
               </p>
               <Link
-                href="/dashboard"
+                href="/consult/video"
                 className={buttonClass({ variant: 'inverse', size: 'sm' }, 'mt-6 w-fit')}
               >
                 Start a consult
@@ -653,7 +653,7 @@ export function Closing() {
           />
           <Reveal delay={0.5} className="mt-10 flex flex-wrap gap-3">
             <Magnetic>
-              <Link href="/dashboard" className={buttonClass({ variant: 'inverse' })}>
+              <Link href="/consult/video" className={buttonClass({ variant: 'inverse' })}>
                 Start a consult
                 <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
               </Link>

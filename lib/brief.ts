@@ -63,8 +63,8 @@ export function buildBrief(profile: Profile, intake: Intake) {
   const lines = [
     `doctor.ai consult ${intake.ref || ''}`.trim(),
     `Patient: ${who}${profile.age ? `, ${profile.age}` : ''}${profile.sex ? `, ${profile.sex}` : ''}`,
-    `Concern: ${intake.concern.trim()}`,
   ];
+  if (intake.concern.trim()) lines.push(`Concern: ${intake.concern.trim()}`);
   if (intake.areas.length) lines.push(`Where: ${intake.areas.join(', ')}`);
   if (intake.since) lines.push(`Started: ${SINCE_LABELS[intake.since]}`);
   if (intake.severity) lines.push(`Severity: ${intake.severity}/10`);
@@ -72,6 +72,13 @@ export function buildBrief(profile: Profile, intake: Intake) {
   if (profile.conditions.trim()) lines.push(`Conditions: ${profile.conditions.trim()}`);
   if (profile.medications.trim()) lines.push(`Medicines: ${profile.medications.trim()}`);
   if (profile.allergies.trim()) lines.push(`Allergies: ${profile.allergies.trim()}`);
+  return lines.join('\n');
+}
+
+/** The brief for a visitor without a profile: just what they typed on the home page. */
+export function buildGuestBrief(concern: string, ref: string) {
+  const lines = [`doctor.ai consult ${ref}`.trim(), 'Patient: a visitor without a profile'];
+  if (concern.trim()) lines.push(`Concern: ${concern.trim()}`);
   return lines.join('\n');
 }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
@@ -19,6 +19,20 @@ const LINKS = [
 export function SiteNav() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const toggle = useRef<HTMLButtonElement>(null);
+
+  // Escape closes the menu and returns focus to the button that opened it.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setOpen(false);
+        toggle.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -59,14 +73,15 @@ export function SiteNav() {
             Dashboard
           </Link>
           <Magnetic>
-            <Link href="/dashboard" className={buttonClass({ size: 'sm' })}>
+            <Link href="/consult/video" className={buttonClass({ size: 'sm' })}>
               Start a consult
             </Link>
           </Magnetic>
         </div>
         <button
+          ref={toggle}
           type="button"
-          className="grid size-10 place-items-center rounded-lg text-gray-900 md:hidden"
+          className="grid size-11 place-items-center rounded-lg text-gray-900 md:hidden"
           aria-label={open ? 'Close menu' : 'Open menu'}
           aria-expanded={open}
           onClick={() => setOpen((v) => !v)}
@@ -94,7 +109,14 @@ export function SiteNav() {
                   {l.label}
                 </a>
               ))}
-              <Link href="/dashboard" className={buttonClass({}, 'mt-2 w-full')}>
+              <Link
+                href="/dashboard"
+                onClick={() => setOpen(false)}
+                className="rounded-lg px-2 py-3 text-gray-700 hover:bg-gray-50"
+              >
+                Dashboard
+              </Link>
+              <Link href="/consult/video" className={buttonClass({}, 'mt-2 w-full')}>
                 Start a consult
               </Link>
             </div>
